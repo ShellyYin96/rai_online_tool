@@ -1,0 +1,234 @@
+.case-studies-container {
+  padding: 2rem 0;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+/* Hero Section */
+.case-studies-hero {
+  background: #1e3a2e;
+  border-radius: 1.5rem;
+  padding: 3rem 2rem;
+  margin-bottom: 3rem;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.case-studies-hero::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="texture" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse"><circle cx="10" cy="10" r="1" fill="rgba(255,255,255,0.1)"/></pattern></defs><rect width="100" height="100" fill="url(%23texture)"/></svg>');
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+.case-studies-title {
+  font-size: 3.5rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 1rem;
+  position: relative;
+  z-index: 1;
+}
+
+.case-studies-subtitle {
+  font-size: 1.2rem;
+  color: #b6c2b6;
+  line-height: 1.6;
+  max-width: 600px;
+  margin: 0 auto 2rem auto;
+  position: relative;
+  z-index: 1;
+}
+
+.contribute-btn {
+  background: #00ff88;
+  color: #000000;
+  border: none;
+  border-radius: 2rem;
+  padding: 1rem 2rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.contribute-btn:hover {
+  background: #00cc6a;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+
+.contribute-btn i {
+  font-size: 1rem;
+}
+
+/* Case Studies Content */
+.case-studies-content {
+  display: flex;
+  flex-direction: column;
+  gap: 3rem;
+}
+
+.case-study-section {
+  margin-bottom: 2rem;
+}
+
+.case-study-category {
+  font-size: 2rem;
+  font-weight: 600;
+  color: #ffffff;
+  margin-bottom: 1.5rem;
+  text-align: left;
+}
+
+.case-study-card {
+  background: #1e3a2e;
+  border-radius: 1rem;
+  padding: 2rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  border: 1px solid #2a4a3a;
+}
+
+.case-study-header {
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 2px solid #f3f4f6;
+}
+
+.case-study-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #ffffff;
+  margin-bottom: 0.5rem;
+}
+
+.case-study-description {
+  font-size: 1rem;
+  color: #cbd5e0;
+  line-height: 1.6;
+}
+
+.case-study-body {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 2rem;
+  align-items: start;
+}
+
+.case-study-content {
+  color: #ffffff;
+  line-height: 1.7;
+}
+
+.case-study-content p {
+  margin-bottom: 1rem;
+  font-size: 1rem;
+}
+
+.case-study-sidebar {
+  background: #000000;
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  border-left: 4px solid #00ff88;
+}
+
+.relevant-principles-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #ffffff;
+  margin-bottom: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.principles-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.principle-tag {
+  background: #00ff88;
+  color: #000000;
+  padding: 0.4rem 0.8rem;
+  border-radius: 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .case-studies-container {
+    padding: 1rem 0;
+  }
+  
+  .case-studies-hero {
+    padding: 2rem 1.5rem;
+    margin-bottom: 2rem;
+  }
+  
+  .case-studies-title {
+    font-size: 2.5rem;
+  }
+  
+  .case-studies-subtitle {
+    font-size: 1rem;
+  }
+  
+  .contribute-btn {
+    padding: 0.8rem 1.5rem;
+    font-size: 1rem;
+  }
+  
+  .case-study-category {
+    font-size: 1.5rem;
+  }
+  
+  .case-study-card {
+    padding: 1.5rem;
+  }
+  
+  .case-study-body {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  
+  .case-study-sidebar {
+    order: -1;
+  }
+}
+
+@media (max-width: 480px) {
+  .case-studies-title {
+    font-size: 2rem;
+  }
+  
+  .case-study-title {
+    font-size: 1.3rem;
+  }
+  
+  .case-study-card {
+    padding: 1rem;
+  }
+  
+  .principles-tags {
+    flex-direction: column;
+  }
+  
+  .principle-tag {
+    text-align: center;
+  }
+} 
