@@ -5,6 +5,7 @@ import '@fortawesome/fontawesome-free/css/all.min.css';
 import CaseContributionForm from './CaseContributionForm';
 import { useNavigate } from 'react-router-dom';
 import AuthModal from './auth/AuthModal';
+import API_BASE_URL from '../config.js';
 
 const caseStudies = [
   {
@@ -61,7 +62,7 @@ const updateSubmission = async (id, data) => {
 
 const fetchApprovedCases = async () => {
   // Fetch only approved cases from backend
-  const res = await fetch('http://localhost:3001/api/case-studies');
+  const res = await fetch(`${API_BASE_URL}/api/case-studies`);
   if (!res.ok) return [];
   return await res.json();
 };

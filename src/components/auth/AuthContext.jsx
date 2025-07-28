@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState } from 'react';
+import API_BASE_URL from '../../config.js';
 
 const AuthContext = createContext();
 
@@ -9,7 +10,7 @@ export const AuthProvider = ({ children }) => {
 
   // Real backend login
   const login = async ({ usernameOrEmail, password }) => {
-    const res = await fetch('http://localhost:3001/api/auth/login', {
+    const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ usernameOrEmail, password })
@@ -22,7 +23,7 @@ export const AuthProvider = ({ children }) => {
     
     // Fetch full profile data
     try {
-      const profileRes = await fetch(`http://localhost:3001/api/auth/profile/${data.email}`);
+      const profileRes = await fetch(`${API_BASE_URL}/api/auth/profile/${data.email}`);
       if (profileRes.ok) {
         const profileData = await profileRes.json();
         setUser({
@@ -49,7 +50,7 @@ export const AuthProvider = ({ children }) => {
 
   // Real backend register
   const register = async ({ username, email, password }) => {
-    const res = await fetch('http://localhost:3001/api/auth/register', {
+    const res = await fetch(`${API_BASE_URL}/api/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, email, password })
@@ -71,7 +72,7 @@ export const AuthProvider = ({ children }) => {
 
   // Real backend forgot password
   const forgotPassword = async (email) => {
-    const res = await fetch('http://localhost:3001/api/auth/forgot-password', {
+    const res = await fetch(`${API_BASE_URL}/api/auth/forgot-password`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email })

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from './auth/AuthContext';
 import ValueCard from './ValueCard';
 import { predefinedValues, predefinedTensions } from '../data/valuesAndTensions';
+import API_BASE_URL from '../config.js';
 
 // Add Tooltip component for instant, smooth tooltips
 const Tooltip = ({ text, children }) => (
@@ -638,7 +639,7 @@ const CaseContributionForm = () => {
     if (!user || !user.email) return;
     
     try {
-      const response = await fetch(`http://localhost:3001/api/user-value-history/${encodeURIComponent(user.email)}`);
+      const response = await fetch(`${API_BASE_URL}/api/user-value-history/${encodeURIComponent(user.email)}`);
       const result = await response.json();
       
       if (result.success) {
@@ -654,7 +655,7 @@ const CaseContributionForm = () => {
     if (!user || !user.email) return;
     
     try {
-      const response = await fetch(`http://localhost:3001/api/user-tension-history/${encodeURIComponent(user.email)}`);
+      const response = await fetch(`${API_BASE_URL}/api/user-tension-history/${encodeURIComponent(user.email)}`);
       const result = await response.json();
       
       if (result.success) {

@@ -7,6 +7,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from './auth/AuthContext';
 import ErrorModal from './ErrorModal';
 import { predefinedValues, predefinedTensions } from '../data/valuesAndTensions';
+import API_BASE_URL from '../config.js';
 
 const exampleCases = [
   { id: 'classroom', title: 'Classroom Management', content: 'Scenario: Using AI to assist with classroom management, such as monitoring student engagement, automating attendance, or flagging disruptions.' },
@@ -921,7 +922,7 @@ const FocusGroupPage = () => {
     if (!user || !user.email) return;
     
     try {
-      const response = await fetch(`http://localhost:3001/api/user-value-history/${encodeURIComponent(user.email)}`);
+      const response = await fetch(`${API_BASE_URL}/api/user-value-history/${encodeURIComponent(user.email)}`);
       const result = await response.json();
       
       if (result.success) {
@@ -938,7 +939,7 @@ const FocusGroupPage = () => {
     if (!user || !user.email) return;
     
     try {
-      const response = await fetch(`http://localhost:3001/api/user-tension-history/${encodeURIComponent(user.email)}`);
+      const response = await fetch(`${API_BASE_URL}/api/user-tension-history/${encodeURIComponent(user.email)}`);
       const result = await response.json();
       
       if (result.success) {
@@ -1042,7 +1043,7 @@ const FocusGroupPage = () => {
     console.log('Submitting data:', submission);
     
     try {
-      const res = await fetch('/api/case-studies-focus-group', {
+      const res = await fetch(`${API_BASE_URL}/api/case-studies-focus-group`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(submission)
@@ -2939,12 +2940,12 @@ const FocusGroupPage = () => {
                     console.log('submissionCompleted:', submissionCompleted);
                     console.log('user:', user);
                     
-                    if (submissionCompleted) {
+                      if (submissionCompleted) {
                       console.log('Resetting form for new submission');
-                      resetFormForNewSubmission();
-                      return;
-                    }
-                    
+                        resetFormForNewSubmission();
+                        return;
+                      }
+                      
                     console.log('Starting validation...');
                     setSaveAllError('');
                     setSaveAllSuccess(false);
@@ -3709,7 +3710,7 @@ const FocusGroupPage = () => {
                 group: groupName || ''
               };
               try {
-                const res = await fetch('/api/case-studies-focus-group', {
+                const res = await fetch(`${API_BASE_URL}/api/case-studies-focus-group`, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify(submission)
@@ -4275,19 +4276,19 @@ const FocusGroupPage = () => {
             </div>
           </div>
         )}
-          <div style={{
-            position: 'fixed',
-            top: '10px',
+            <div style={{
+              position: 'fixed',
+              top: '10px',
             left: '10px',
             background: 'red',
-            color: 'white',
-            padding: '10px',
+              color: 'white',
+              padding: '10px',
             zIndex: 99999999,
             fontSize: '20px'
-          }}>
+            }}>
             DEBUG: Confirmation Modal Should Be Visible!
-          </div>
-
+            </div>
+            
             
 
       </DndProvider>

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from './auth/AuthContext';
+import API_BASE_URL from '../config.js';
 
 
 
@@ -66,7 +67,7 @@ const GroupSubmissions = () => {
       setError('');
       try {
         console.log('Fetching group submissions for group:', groupName);
-        const res = await fetch(`http://localhost:3001/api/group-submissions?group=${encodeURIComponent(groupName)}`);
+        const res = await fetch(`${API_BASE_URL}/api/group-submissions?group=${encodeURIComponent(groupName)}`);
         if (!res.ok) throw new Error('Failed to fetch group submissions');
         const data = await res.json();
         console.log('API Response:', data);
@@ -113,7 +114,7 @@ const GroupSubmissions = () => {
     setEditLoading(true);
     setEditError('');
     setEditSuccess('');
-    const res = await fetch(`http://localhost:3001/api/case-studies/${editData.id}`, {
+            const res = await fetch(`${API_BASE_URL}/api/case-studies/${editData.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(editData)
@@ -516,7 +517,7 @@ const GroupSubmissions = () => {
   // Function to save edited submission to server
   const saveEditedSubmissionToServer = async (submissionId, editedData, facilitatorComment = '') => {
     try {
-      const response = await fetch('http://localhost:3001/api/save-edited-submission', {
+              const response = await fetch(`${API_BASE_URL}/api/save-edited-submission`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -3,6 +3,7 @@ import './TopBar.css';
 import { useAuth } from './auth/AuthContext';
 import AuthModal from './auth/AuthModal';
 import { useNavigate } from 'react-router-dom';
+import API_BASE_URL from '../config.js';
 
 // Move ProfileModal outside of TopBar
 const ProfileModal = ({ user, open, onClose, form, setForm, onSave }) => {
@@ -310,7 +311,7 @@ const TopBar = ({ activeSection, onSectionChange }) => {
   const handleSaveProfile = async () => {
     console.log('handleSaveProfile called with form data:', form);
     try {
-      const response = await fetch('http://localhost:3001/api/auth/update-profile', {
+      const response = await fetch(`${API_BASE_URL}/api/auth/update-profile`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
