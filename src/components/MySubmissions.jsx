@@ -45,14 +45,56 @@ const MySubmissions = () => {
     setError('');
     setSuccess('');
   };
-  const handleEditChange = e => {
+
+  const handleEditChange = (e, section = 'conceptCard', caseIndex = null) => {
     const { name, value } = e.target;
-    setEditData(d => ({ ...d, [name]: value }));
+    setEditData(d => {
+      const newData = { ...d };
+      if (section === 'conceptCard') {
+        newData.conceptCard = { ...newData.conceptCard, [name]: value };
+      } else if (section === 'case' && caseIndex !== null) {
+        newData.cases = [...newData.cases];
+        newData.cases[caseIndex] = { ...newData.cases[caseIndex], [name]: value };
+      }
+      return newData;
+    });
   };
+
   const handleEditSave = async () => {
     setLoading(true);
     setError('');
     setSuccess('');
+
+    // Validate concept card
+    if (!editData.conceptCard?.title || editData.conceptCard.title.trim() === '') {
+      setError('Title is required for the AI Application Card.');
+      setLoading(false);
+      return;
+    }
+    if (!editData.conceptCard?.description || editData.conceptCard.description.trim() === '') {
+      setError('Description is required for the AI Application Card.');
+      setLoading(false);
+      return;
+    }
+
+    // Validate cases
+    let hasError = false;
+    editData.cases?.forEach((card, idx) => {
+      if (!card.summary || card.summary.trim() === '') {
+        setError(`Case ${idx + 1}: Case Theme is required.`);
+        hasError = true;
+      }
+      if (!card.caseText || card.caseText.trim() === '') {
+        setError(`Case ${idx + 1}: Case Narrative is required.`);
+        hasError = true;
+      }
+    });
+
+    if (hasError) {
+      setLoading(false);
+      return;
+    }
+
     const res = await fetch(`/api/case-studies/${editData.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -64,7 +106,7 @@ const MySubmissions = () => {
       setTimeout(() => {
         setExpandedId(null);
         setSuccess('');
-      }, 900); // Collapse after 0.9s
+      }, 900);
     } else {
       const data = await res.json().catch(() => ({}));
       setError(data.error || 'Failed to update submission');
@@ -121,8 +163,8 @@ const MySubmissions = () => {
             <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 32, background: '#fff', borderRadius: 16, boxShadow: '0 2px 12px rgba(34,197,94,0.07)' }}>
               <thead>
                 <tr style={{ background: '#bbf7d0' }}>
-                  <th style={{ padding: '1rem', textAlign: 'left', fontSize: '1.08rem' }}>Title</th>
-                  <th style={{ padding: '1rem', textAlign: 'left', fontSize: '1.08rem' }}>Group</th>
+                  <th style={{ padding: '1rem', textAlign: 'left', fontSize: '1.08rem' }}>AI Application</th>
+                  <th style={{ padding: '1rem', textAlign: 'left', fontSize: '1.08rem' }}>Cases</th>
                   <th style={{ padding: '1rem', textAlign: 'left', fontSize: '1.08rem' }}>Status</th>
                   <th style={{ padding: '1rem', textAlign: 'left', fontSize: '1.08rem' }}>Action</th>
                 </tr>
@@ -139,8 +181,8 @@ const MySubmissions = () => {
                       onMouseEnter={e => e.currentTarget.style.background = '#e6faed'}
                       onMouseLeave={e => e.currentTarget.style.background = expandedId === sub.id ? '#bbf7d0' : '#fff'}
                     >
-                      <td style={{ padding: '0.7rem', fontWeight: 600 }}>{sub.title}</td>
-                      <td style={{ padding: '0.7rem' }}>{sub.group ? sub.group : <span style={{ color: '#888' }}>Individual</span>}</td>
+                      <td style={{ padding: '0.7rem', fontWeight: 600 }}>{sub.conceptCard?.title || sub.title}</td>
+                      <td style={{ padding: '0.7rem' }}>{sub.cases?.length || 0} case{sub.cases?.length !== 1 ? 's' : ''}</td>
                       <td style={{ padding: '0.7rem', color: sub.status === 'approved' ? '#16a34a' : '#f59e42', fontWeight: 600 }}>{sub.status ? sub.status.charAt(0).toUpperCase() + sub.status.slice(1) : 'Pending'}</td>
                       <td style={{ padding: '0.7rem' }}>
                         <button
@@ -156,31 +198,159 @@ const MySubmissions = () => {
                       <tr>
                         <td colSpan={4} style={{ background: '#f3f4f6', padding: '1.5rem 2rem', transition: 'all 0.3s' }}>
                           <form onSubmit={e => { e.preventDefault(); if (sub.status === 'pending') handleEditSave(); }}>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 600, transition: 'all 0.3s' }}>
-                              <label>Title
-                                <input name="title" value={editData.title || ''} onChange={handleEditChange} disabled={sub.status !== 'pending'} style={{ width: '100%' }} />
-                              </label>
-                              <label>Author
-                                <input name="author" value={editData.author || ''} onChange={handleEditChange} disabled={sub.status !== 'pending'} style={{ width: '100%' }} />
-                              </label>
-                              <label>Text/Content
-                                <textarea name="text" value={editData.text || ''} onChange={handleEditChange} disabled={sub.status !== 'pending'} rows={6} style={{ width: '100%' }} />
-                              </label>
-                              <label>Date
-                                <input name="date" value={editData.date || ''} onChange={handleEditChange} disabled={sub.status !== 'pending'} style={{ width: '100%' }} />
-                              </label>
-                              <label>Subject
-                                <input name="subject" value={editData.subject || ''} onChange={handleEditChange} disabled={sub.status !== 'pending'} style={{ width: '100%' }} />
-                              </label>
-                              <label>Grade
-                                <input name="grade" value={editData.grade || ''} onChange={handleEditChange} disabled={sub.status !== 'pending'} style={{ width: '100%' }} />
-                              </label>
-                              <label>Group
-                                <input name="group" value={editData.group || ''} disabled style={{ width: '100%', background: '#e5e7eb' }} />
-                              </label>
-                              <label>Status
-                                <input name="status" value={editData.status || ''} disabled style={{ width: '100%', background: '#e5e7eb', color: editData.status === 'approved' ? '#16a34a' : '#f59e42', fontWeight: 600 }} />
-                              </label>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 800, transition: 'all 0.3s' }}>
+                              
+                              {/* AI Application Card Section */}
+                              <div style={{ background: '#fff', padding: '1.5rem', borderRadius: 12, border: '1px solid #e5e7eb' }}>
+                                <h3 style={{ color: '#16a34a', marginBottom: '1rem', fontSize: '1.2rem', fontWeight: 700 }}>AI Application Card</h3>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                  <div>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, fontSize: '0.9rem' }}>
+                                      Title *
+                                      <input 
+                                        name="title" 
+                                        value={editData.conceptCard?.title || ''} 
+                                        onChange={(e) => handleEditChange(e, 'conceptCard')} 
+                                        disabled={sub.status !== 'pending'} 
+                                        style={{ width: '100%', padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: 4 }} 
+                                      />
+                                    </label>
+                                  </div>
+                                  <div>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, fontSize: '0.9rem' }}>
+                                      Description *
+                                      <textarea 
+                                        name="description" 
+                                        value={editData.conceptCard?.description || ''} 
+                                        onChange={(e) => handleEditChange(e, 'conceptCard')} 
+                                        disabled={sub.status !== 'pending'} 
+                                        rows={3}
+                                        style={{ width: '100%', padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: 4 }} 
+                                      />
+                                    </label>
+                                  </div>
+                                  <div>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, fontSize: '0.9rem' }}>
+                                      Do Act
+                                      <input 
+                                        name="doAct" 
+                                        value={editData.conceptCard?.doAct || ''} 
+                                        onChange={(e) => handleEditChange(e, 'conceptCard')} 
+                                        disabled={sub.status !== 'pending'} 
+                                        style={{ width: '100%', padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: 4 }} 
+                                      />
+                                    </label>
+                                  </div>
+                                  <div>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, fontSize: '0.9rem' }}>
+                                      Infer Reason
+                                      <input 
+                                        name="inferReason" 
+                                        value={editData.conceptCard?.inferReason || ''} 
+                                        onChange={(e) => handleEditChange(e, 'conceptCard')} 
+                                        disabled={sub.status !== 'pending'} 
+                                        style={{ width: '100%', padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: 4 }} 
+                                      />
+                                    </label>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Cases Section */}
+                              <div style={{ background: '#fff', padding: '1.5rem', borderRadius: 12, border: '1px solid #e5e7eb' }}>
+                                <h3 style={{ color: '#16a34a', marginBottom: '1rem', fontSize: '1.2rem', fontWeight: 700 }}>Cases</h3>
+                                {editData.cases?.map((caseItem, caseIndex) => (
+                                  <div key={caseIndex} style={{ marginBottom: '1.5rem', padding: '1rem', border: '1px solid #e5e7eb', borderRadius: 8 }}>
+                                    <h4 style={{ color: '#374151', marginBottom: '1rem', fontSize: '1rem', fontWeight: 600 }}>Case {caseIndex + 1}</h4>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                      <div>
+                                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, fontSize: '0.9rem' }}>
+                                          Case Theme *
+                                          <input 
+                                            name="summary" 
+                                            value={caseItem.summary || ''} 
+                                            onChange={(e) => handleEditChange(e, 'case', caseIndex)} 
+                                            disabled={sub.status !== 'pending'} 
+                                            style={{ width: '100%', padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: 4 }} 
+                                          />
+                                        </label>
+                                      </div>
+                                      <div>
+                                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, fontSize: '0.9rem' }}>
+                                          Subject
+                                          <input 
+                                            name="subject" 
+                                            value={caseItem.subject || ''} 
+                                            onChange={(e) => handleEditChange(e, 'case', caseIndex)} 
+                                            disabled={sub.status !== 'pending'} 
+                                            style={{ width: '100%', padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: 4 }} 
+                                          />
+                                        </label>
+                                      </div>
+                                      <div>
+                                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, fontSize: '0.9rem' }}>
+                                          Grade Level
+                                          <input 
+                                            name="gradeLevel" 
+                                            value={caseItem.gradeLevel || ''} 
+                                            onChange={(e) => handleEditChange(e, 'case', caseIndex)} 
+                                            disabled={sub.status !== 'pending'} 
+                                            style={{ width: '100%', padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: 4 }} 
+                                          />
+                                        </label>
+                                      </div>
+                                      <div>
+                                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, fontSize: '0.9rem' }}>
+                                          Date
+                                          <input 
+                                            name="date" 
+                                            value={caseItem.date || ''} 
+                                            onChange={(e) => handleEditChange(e, 'case', caseIndex)} 
+                                            disabled={sub.status !== 'pending'} 
+                                            style={{ width: '100%', padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: 4 }} 
+                                          />
+                                        </label>
+                                      </div>
+                                      <div style={{ gridColumn: '1 / -1' }}>
+                                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, fontSize: '0.9rem' }}>
+                                          Case Narrative *
+                                          <textarea 
+                                            name="caseText" 
+                                            value={caseItem.caseText || ''} 
+                                            onChange={(e) => handleEditChange(e, 'case', caseIndex)} 
+                                            disabled={sub.status !== 'pending'} 
+                                            rows={4}
+                                            style={{ width: '100%', padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: 4 }} 
+                                          />
+                                        </label>
+                                      </div>
+                                    </div>
+                                    
+                                    {/* Values and Tensions Display */}
+                                    <div style={{ marginTop: '1rem' }}>
+                                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                        <div>
+                                          <h5 style={{ color: '#374151', marginBottom: '0.5rem', fontSize: '0.9rem', fontWeight: 600 }}>Values ({caseItem.values?.length || 0})</h5>
+                                          {caseItem.values?.map((value, idx) => (
+                                            <div key={idx} style={{ background: '#f9fafb', padding: '0.5rem', borderRadius: 4, marginBottom: '0.5rem', fontSize: '0.85rem' }}>
+                                              <strong>{value.value}</strong>: {value.definition}
+                                            </div>
+                                          ))}
+                                        </div>
+                                        <div>
+                                          <h5 style={{ color: '#374151', marginBottom: '0.5rem', fontSize: '0.9rem', fontWeight: 600 }}>Tensions ({caseItem.tensions?.length || 0})</h5>
+                                          {caseItem.tensions?.map((tension, idx) => (
+                                            <div key={idx} style={{ background: '#f9fafb', padding: '0.5rem', borderRadius: 4, marginBottom: '0.5rem', fontSize: '0.85rem' }}>
+                                              <strong>{tension.value}</strong>: {tension.definition}
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+
                               {error && <div style={{ color: '#ef4444', marginTop: 4 }}>{error}</div>}
                               {success && (
                                 <div style={{ color: '#16a34a', marginTop: 4, display: 'flex', alignItems: 'center', gap: 8 }}>

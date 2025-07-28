@@ -31,7 +31,7 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
       if (onAuthSuccess) onAuthSuccess();
       onClose();
     } catch (err) {
-      setError('Login failed. Please check your credentials.');
+      setError('Incorrect password. Please try again.');
     }
   };
 

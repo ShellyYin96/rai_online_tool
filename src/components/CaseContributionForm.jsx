@@ -209,6 +209,7 @@ function TensionCard({ value, definition, onDelete, onSave, onClick }) {
 }
 
 const CaseContributionForm = () => {
+  // All useState hooks at the top!
   const { user } = useAuth();
   const [selectedScenario, setSelectedScenario] = useState('classroom');
   const [customData, setCustomData] = useState({
@@ -249,6 +250,12 @@ const CaseContributionForm = () => {
   const [showQA, setShowQA] = useState(false);
   const [showCreateTensionModal, setShowCreateTensionModal] = useState(false);
   const [userTensionHistory, setUserTensionHistory] = useState([]);
+  const [showValidationModal, setShowValidationModal] = useState(false);
+  const [showCaseSelectionModal, setShowCaseSelectionModal] = useState(false);
+  const [pendingAssignment, setPendingAssignment] = useState(null); // { type: 'value'|'tension', item: {...} }
+  const [editingSelectedValueIndex, setEditingSelectedValueIndex] = useState(-1);
+  const [editingSelectedTensionIndex, setEditingSelectedTensionIndex] = useState(-1);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   // Initialize template data when component mounts
   useEffect(() => {
@@ -293,6 +300,27 @@ const CaseContributionForm = () => {
 
   // Add, edit, delete, fold/unfold case cards (scaffolded, details to be filled in next steps)
   const handleAddCase = () => {
+    // Validate that all existing cases have required fields
+    const missingFields = [];
+    
+    caseCards.forEach((card, idx) => {
+      if (!card.summary || card.summary.trim() === '') {
+        missingFields.push(`Case ${idx + 1}: Case Theme is required.`);
+      }
+      if (!card.caseText || card.caseText.trim() === '') {
+        missingFields.push(`Case ${idx + 1}: Case Narrative is required.`);
+      }
+      if (!card.values || card.values.length === 0) {
+        missingFields.push(`Case ${idx + 1}: At least one Value is required.`);
+      }
+    });
+    
+    if (missingFields.length > 0) {
+      setErrorMessage(missingFields.join('\n'));
+      setShowValidationModal(true);
+      return;
+    }
+    
     const newCase = { ...initialCaseCard };
     setCaseCards(prev => [...prev, newCase]);
     // Fold all existing cases and expand only the new one
@@ -330,8 +358,99 @@ const CaseContributionForm = () => {
     setExpandedCases(expanded => expanded.map((v, i) => i === idx ? !v : v));
   };
 
+  // Validate individual case
+  const validateCase = (caseIdx) => {
+    const card = caseCards[caseIdx];
+    const missingFields = [];
+    
+    if (!card.summary || card.summary.trim() === '') {
+      missingFields.push('Case Theme is required.');
+    }
+    if (!card.caseText || card.caseText.trim() === '') {
+      missingFields.push('Case Narrative is required.');
+    }
+    if (!card.values || card.values.length === 0) {
+      missingFields.push('At least one Value is required.');
+    }
+    
+    return missingFields;
+  };
+
+  // Save/fold individual case
+  const handleSaveCase = (caseIdx) => {
+    const missingFields = validateCase(caseIdx);
+    
+    if (missingFields.length > 0) {
+      setErrorMessage(missingFields.join('\n'));
+      setShowValidationModal(true);
+      return;
+    }
+    
+    // Fold the case (mark as completed)
+    setExpandedCases(expanded => expanded.map((v, i) => i === caseIdx ? false : v));
+  };
+
+  // Get open cases (expanded cases)
+  const getOpenCases = () => {
+    return caseCards.map((card, idx) => ({ card, idx })).filter(({ idx }) => expandedCases[idx]);
+  };
+
+  // Handle direct assignment of value/tension to case
+  const handleDirectAssignment = (type, item) => {
+    const openCases = getOpenCases();
+    
+    if (openCases.length === 0) {
+      setErrorMessage('No case is currently open. Please expand a case first to assign values or tensions.');
+      setShowValidationModal(true);
+      return;
+    }
+    
+    if (openCases.length === 1) {
+      // Direct assignment to the only open case
+      const caseIdx = openCases[0].idx;
+      if (type === 'value') {
+        addValueToCase(item, caseIdx);
+      } else {
+        addTensionToCase(item, caseIdx);
+      }
+      // Remove from selected items
+      if (type === 'value') {
+        setSelectedValues(prev => prev.filter(v => !(v.value === item.value && v.definition === item.definition)));
+      } else {
+        setSelectedTensions(prev => prev.filter(t => !(t.value === item.value && t.definition === item.definition)));
+      }
+    } else {
+      // Multiple cases open - show selection modal
+      setPendingAssignment({ type, item });
+      setShowCaseSelectionModal(true);
+    }
+  };
+
+  // Handle case selection for assignment
+  const handleCaseSelection = (caseIdx) => {
+    if (!pendingAssignment) return;
+    
+    const { type, item } = pendingAssignment;
+    if (type === 'value') {
+      addValueToCase(item, caseIdx);
+      setSelectedValues(prev => prev.filter(v => !(v.value === item.value && v.definition === item.definition)));
+    } else {
+      addTensionToCase(item, caseIdx);
+      setSelectedTensions(prev => prev.filter(t => !(t.value === item.value && t.definition === item.definition)));
+    }
+    
+    setPendingAssignment(null);
+    setShowCaseSelectionModal(false);
+  };
+
   // Save All (scaffolded, backend integration to be added)
   const handleSaveAll = async () => {
+    setShowConfirmModal(true);
+  };
+
+  // Add new function to handle actual save after confirmation:
+  const handleConfirmSave = async () => {
+    setShowConfirmModal(false);
     setSaveError(''); 
     setSaveSuccess(false);
     
@@ -356,11 +475,11 @@ const CaseContributionForm = () => {
     let hasError = false;
     caseCards.forEach((card, idx) => {
       if (!card.summary || card.summary.trim() === '') {
-        setSaveError(`Case ${idx + 1}: Short Summary is required.`);
+        setSaveError(`Case ${idx + 1}: Case Theme is required.`);
         hasError = true;
       }
       if (!card.caseText || card.caseText.trim() === '') {
-        setSaveError(`Case ${idx + 1}: Case Description is required.`);
+        setSaveError(`Case ${idx + 1}: Case Narrative is required.`);
         hasError = true;
       }
     });
@@ -394,7 +513,7 @@ const CaseContributionForm = () => {
       });
       
       if (res.ok) {
-    setSaveSuccess(true);
+        setSaveSuccess(true);
         setSaveError('');
         // Reset form after successful save
         setCustomData({
@@ -590,13 +709,22 @@ const CaseContributionForm = () => {
 
   // Handle create new value
   const handleCreateValue = () => {
+    console.log('handleCreateValue called');
+    console.log('editingSelectedValueIndex:', editingSelectedValueIndex);
+    console.log('editingValueIndex:', editingValueIndex);
+    console.log('newValue:', newValue);
+    
     if (newValue.value.trim() && newValue.definition.trim()) {
       const updatedValue = {
         value: newValue.value.trim(),
         definition: newValue.definition.trim()
       };
-      
-      if (editingValueIndex >= 0) {
+      if (editingSelectedValueIndex >= 0) {
+        console.log('Editing selected value at index:', editingSelectedValueIndex);
+        // Editing a value in selectedValues
+        setSelectedValues(prev => prev.map((v, idx) => idx === editingSelectedValueIndex ? updatedValue : v));
+        setEditingSelectedValueIndex(-1);
+      } else if (editingValueIndex >= 0) {
         // Editing an existing value in the pool
         // Check for duplicate names (excluding the current value being edited)
         const otherValueNames = valueCards
@@ -635,18 +763,28 @@ const CaseContributionForm = () => {
       setNewValue({ value: '', definition: '' });
       setShowCreateValueModal(false);
       setEditingValueIndex(-1);
+      setEditingSelectedValueIndex(-1);
     }
   };
 
   // Handle create new tension
   const handleCreateTension = () => {
+    console.log('handleCreateTension called');
+    console.log('editingSelectedTensionIndex:', editingSelectedTensionIndex);
+    console.log('editingTensionIndex:', editingTensionIndex);
+    console.log('newTension:', newTension);
+    
     if (newTension.value.trim() && newTension.definition.trim()) {
       const updatedTension = {
         value: newTension.value.trim(),
         definition: newTension.definition.trim()
       };
-      
-      if (editingTensionIndex >= 0) {
+      if (editingSelectedTensionIndex >= 0) {
+        console.log('Editing selected tension at index:', editingSelectedTensionIndex);
+        // Editing a tension in selectedTensions
+        setSelectedTensions(prev => prev.map((t, idx) => idx === editingSelectedTensionIndex ? updatedTension : t));
+        setEditingSelectedTensionIndex(-1);
+      } else if (editingTensionIndex >= 0) {
         // Editing an existing tension in the pool
         // Check for duplicate names (excluding the current tension being edited)
         const otherTensionNames = tensionCards
@@ -685,54 +823,50 @@ const CaseContributionForm = () => {
       setNewTension({ value: '', definition: '' });
       setShowCreateTensionModal(false);
       setEditingTensionIndex(-1);
+      setEditingSelectedTensionIndex(-1);
     }
   };
 
-  // Add selected values to the value pool
-  const addToValuePool = () => {
-    // Check for duplicate value names
-    const existingValueNames = valueCards.map(card => card.value.toLowerCase());
-    const duplicateValues = selectedValues.filter(value => 
-      existingValueNames.includes(value.value.toLowerCase())
-    );
-    
-    if (duplicateValues.length > 0) {
-      const duplicateNames = duplicateValues.map(v => v.value).join(', ');
-      showError(`Cannot add values with duplicate names:\n\n"${duplicateNames}"\n\nThese values already exist in the pool. Please remove them from your selection or use different names.`);
-      return;
-    }
-    
-    setValueCards(prev => [...prev, ...selectedValues]);
-    setSelectedValues([]);
+  // Close search modals and keep selected items
+  const closeValueModal = () => {
     setShowValueModal(false);
   };
 
-  // Add selected tensions to the tension pool
-  const addToTensionPool = () => {
-    // Check for duplicate tension names
-    const existingTensionNames = tensionCards.map(card => card.value.toLowerCase());
-    const duplicateTensions = selectedTensions.filter(tension => 
-      existingTensionNames.includes(tension.value.toLowerCase())
-    );
-    
-    if (duplicateTensions.length > 0) {
-      const duplicateNames = duplicateTensions.map(t => t.value).join(', ');
-      showError(`Cannot add tensions with duplicate names:\n\n"${duplicateNames}"\n\nThese tensions already exist in the pool. Please remove them from your selection or use different names.`);
-      return;
-    }
-    
-    setTensionCards(prev => [...prev, ...selectedTensions]);
-    setSelectedTensions([]);
+  const closeTensionModal = () => {
     setShowTensionModal(false);
   };
 
   // Add value from pool to specific case
   const addValueToCase = (value, caseIdx) => {
-    setCaseCards(prev => prev.map((card, i) => 
-      i === caseIdx 
-        ? { ...card, values: [...(card.values || []), value] }
-        : card
-    ));
+    setCaseCards(prev => prev.map((card, i) => {
+      if (i !== caseIdx) return card;
+      // Check for duplicate name or definition in the case
+      const hasDuplicate = (card.values || []).some(existingValue =>
+        existingValue.value.trim().toLowerCase() === value.value.trim().toLowerCase() ||
+        existingValue.definition.trim() === value.definition.trim()
+      );
+      if (hasDuplicate) {
+        showError('This case already contains a value with the same name or definition.');
+        return card;
+      }
+      return { ...card, values: [...(card.values || []), value] };
+    }));
+  };
+
+  const addTensionToCase = (tension, caseIdx) => {
+    setCaseCards(prev => prev.map((card, i) => {
+      if (i !== caseIdx) return card;
+      // Check for duplicate name or definition in the case
+      const hasDuplicate = (card.tensions || []).some(existingTension =>
+        existingTension.value.trim().toLowerCase() === tension.value.trim().toLowerCase() ||
+        existingTension.definition.trim() === tension.definition.trim()
+      );
+      if (hasDuplicate) {
+        showError('This case already contains a tension with the same name or definition.');
+        return card;
+      }
+      return { ...card, tensions: [...(card.tensions || []), tension] };
+    }));
   };
 
   // Get the currently active case index
@@ -1184,23 +1318,16 @@ const CaseContributionForm = () => {
                   margin: 0, 
                   color: '#0c4a6e', 
                   fontSize: '1.4rem', 
-                  fontWeight: 600 
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px'
                 }}>
                   The Collection of Cases
+                  <Tooltip text="The Collection of Cases is designed to capture real or hypothetical classroom situations where the same AI application (as defined above) is used. All cases added to this collection should relate to that same system.">?</Tooltip>
                 </h3>
         </div>
-              <div style={{ 
-                color: '#388e5c', 
-                fontSize: '1.00rem', 
-                marginBottom: 22, 
-                fontWeight: 500, 
-                lineHeight: 1.6, 
-                textAlign: 'center', 
-                maxWidth: 700,
-                margin: '0 auto 32px auto'
-              }}>
-                Describe specific scenarios where your AI system would be used in educational settings. Each case should include details about the context, stakeholders, and ethical considerations.
-              </div>
               
           {caseCards.map((card, idx) => (
             <div key={idx} style={{
@@ -1232,40 +1359,59 @@ const CaseContributionForm = () => {
                   >
                   Case {idx + 1} {expandedCases[idx] ? '▼' : '▶'}
                 </h3>
-                {caseCards.length > 1 && (
-                  <button
-                    onClick={() => handleRemoveCase(idx)}
-                    style={{
-                      position: 'absolute',
-                      top: '12px',
-                      right: '12px',
-                      background: '#ef4444',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '50%',
-                      width: '28px',
-                      height: '28px',
-                      fontSize: '14px',
-                      fontWeight: 'bold',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      boxShadow: '0 2px 4px rgba(239, 68, 68, 0.3)',
-                      transition: 'all 0.2s ease'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.target.style.transform = 'scale(1.1)';
-                      e.target.style.boxShadow = '0 4px 8px rgba(239, 68, 68, 0.4)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.transform = 'scale(1)';
-                      e.target.style.boxShadow = '0 2px 4px rgba(239, 68, 68, 0.3)';
-                    }}
-                  >
-                    ×
-                  </button>
-              )}
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  {expandedCases[idx] && (
+                    <button
+                      onClick={() => handleSaveCase(idx)}
+                      style={{
+                        background: '#16a34a',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        padding: '6px 12px',
+                        fontSize: '0.85rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        transition: 'background 0.2s'
+                      }}
+                      onMouseEnter={(e) => e.target.style.background = '#15803d'}
+                      onMouseLeave={(e) => e.target.style.background = '#16a34a'}
+                    >
+                      Save Case
+                    </button>
+                  )}
+                  {caseCards.length > 1 && (
+                    <button
+                      onClick={() => handleRemoveCase(idx)}
+                      style={{
+                        background: '#ef4444',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '50%',
+                        width: '28px',
+                        height: '28px',
+                        fontSize: '14px',
+                        fontWeight: 'bold',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: '0 2px 4px rgba(239, 68, 68, 0.3)',
+                        transition: 'all 0.2s ease'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.target.style.transform = 'scale(1.1)';
+                        e.target.style.boxShadow = '0 4px 8px rgba(239, 68, 68, 0.4)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.target.style.transform = 'scale(1)';
+                        e.target.style.boxShadow = '0 2px 4px rgba(239, 68, 68, 0.3)';
+                      }}
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Case Content - Only show when expanded */}
@@ -1566,7 +1712,7 @@ const CaseContributionForm = () => {
             + Add Another Case
           </button>
         </div>
-        {/* Value Cards Section */}
+        {/* Unified Value Cards and Tension Cards Section */}
             <div style={{ 
               width: '100%', 
               maxWidth: 1100, 
@@ -1589,19 +1735,9 @@ const CaseContributionForm = () => {
                 textAlign: 'center', 
                 width: '100%' 
               }}>
-                Value Cards
+                Value Cards & Tension Cards
               </div>
-              <div style={{ 
-                color: '#388e5c', 
-                fontSize: '1.00rem', 
-                marginBottom: 22, 
-                fontWeight: 500, 
-                lineHeight: 1.6, 
-                textAlign: 'left', 
-                maxWidth: 700 
-              }}>
-            These are ethical principles that guide how AI should be designed, used, and governed to benefit people and society. They help ensure AI is fair, safe, transparent, and aligned with human needs and rights.
-          </div>
+
 
               {/* Q&A Section */}
               <div style={{
@@ -1640,7 +1776,7 @@ const CaseContributionForm = () => {
                   <h4 style={{
                     color: '#0c4a6e',
                     fontWeight: 600,
-                    fontSize: '1rem',
+                    fontSize: '0.8rem',
                     margin: 0,
                     flex: 1
                   }}>
@@ -1659,45 +1795,40 @@ const CaseContributionForm = () => {
                 
                 {showQA && (
                   <div style={{ fontSize: '0.85rem', lineHeight: 1.5, textAlign: 'left' }}>
+                    
                     <div style={{ marginBottom: '1rem' }}>
-                      <div style={{ fontWeight: 600, color: '#0c4a6e', marginBottom: '0.3rem' }}>
-                        Q: Can I edit values after adding them to cases?
+                      <div style={{ fontWeight: 600, color: '#0c4a6e', marginBottom: '0.3rem',marginTop: '1rem' }}>
+                        Q: What are Responsible AI Values and Value Tensions?
                       </div>
                       <div style={{ color: '#374151' }}>
-                        A: Yes! You can edit values in the "Selected Values from Search" section. Each case can have its own contextual definition of the same value. For example, you might define Privacy differently in classroom management versus assessment scenarios. Be sure the definition you provide clearly describes what that value means in your case and how it relates to the AI application.
+                        A: Responsible AI values, like fairness, transparency, and safety, guide how AI should be designed and used to benefit people and society. While these are often developed by tech companies and governments, they don't always reflect the realities of the classroom. Through authentic classroom cases, we aim to surface educator-defined values and real-world tensions. For example, being transparent about how AI flags student disengagement might conflict with protecting student privacy. This tool helps you document and share these values and tensions, so AI developers can better understand what matters in your teaching context.
                       </div>
                     </div>
                     
                     <div style={{ marginBottom: '1rem' }}>
                       <div style={{ fontWeight: 600, color: '#0c4a6e', marginBottom: '0.3rem' }}>
-                        Q: How do I add values to my cases?
+                        Q: How do I add values or value tensions to my cases?
                       </div>
                       <div style={{ color: '#374151' }}>
-                        A:
-                        <ol style={{ margin: '0.3rem 0 0 1.2rem', padding: 0 }}>
-                          <li style={{ marginBottom: '0.2rem' }}>Click "🔍 Search Values" to browse predefined values or access your search history.</li>
-                          <li style={{ marginBottom: '0.2rem' }}>Select values to add to your value pool.</li>
-                          <li style={{ marginBottom: '0.2rem' }}>Make sure the definitions clearly reflect your thinking.</li>
-                          <li style={{ marginBottom: '0.2rem' }}>Expand a case and click values in your pool to assign them to that specific case.</li>
-                          <li style={{ marginBottom: '0.2rem' }}>Repeat this process for any additional cases within the same AI application scenario.</li>
-                        </ol>
+                        A: 1) Click "🔍 Search Values" or "🔍 Search Tensions" to browse predefined options or review your history. 2) Select values or value tensions to add to your pool, and ensure the definitions align with your understanding. 3) Open a case by clicking to expand it, then click on the values or tensions in your pool to assign them to that specific case.
                       </div>
                     </div>
+                    
                     <div>
                       <div style={{ fontWeight: 600, color: '#0c4a6e', marginBottom: '0.3rem' }}>
                         Q: Can I create my own values?
                       </div>
                       <div style={{ color: '#374151' }}>
-                        A: Absolutely! Click "Create Your Own Value" in the search window to define a custom value name and description tailored to your AI application context.
+                        A: Absolutely! Click "Create Your Own Value/tensions" in the search window to define a custom value name and description tailored to your AI application context.
                       </div>
                     </div>
                   </div>
                 )}
               </div>
               
-              {/* Search Values Button */}
-              <div style={{ marginBottom: '20px' }}>
-              <button
+              {/* Search Buttons */}
+              <div style={{ marginBottom: '20px', display: 'flex', gap: '12px', justifyContent: 'center' }}>
+                <button
                   onClick={() => setShowValueModal(true)}
                   style={{
                     background: '#16a34a',
@@ -1714,262 +1845,7 @@ const CaseContributionForm = () => {
                   onMouseLeave={(e) => e.target.style.background = '#16a34a'}
                 >
                   🔍 Search Values
-              </button>
-              </div>
-              
-
-
-              {/* Value Pool Section - Compact Names Only */}
-              {valueCards.length > 0 && (
-                <div style={{ 
-                  marginTop: '2rem',
-                  padding: '1.5rem',
-                  background: '#f8fafc',
-                  borderRadius: 12,
-                  border: '1px solid #e5e7eb'
-                }}>
-                  <div style={{ 
-                    color: '#374151', 
-                    fontWeight: 600, 
-                    fontSize: '1rem', 
-                    marginBottom: '1rem',
-                    textAlign: 'center'
-                  }}>
-                    Value Pool - Click any value to add to {getActiveCaseText()}
-                  </div>
-                  {getActiveCaseIndex() === -1 && (
-                    <div style={{ 
-                      color: '#dc2626', 
-                      fontSize: '0.9rem', 
-                      marginBottom: '1rem',
-                      textAlign: 'center',
-                      padding: '0.5rem',
-                      background: '#fef2f2',
-                      borderRadius: '6px',
-                      border: '1px solid #fecaca'
-                    }}>
-                      No case is expanded. Please expand a case first to add values.
-                    </div>
-                  )}
-                  <div style={{ 
-                    display: 'flex', 
-                    flexWrap: 'wrap',
-                    gap: 8, 
-                    width: '100%'
-                  }}>
-                    {valueCards.map((card, idx) => {
-                      const activeCaseIndex = getActiveCaseIndex();
-                      const isAlreadyInCase = activeCaseIndex >= 0 && 
-                        caseCards[activeCaseIndex]?.values?.some(existingValue => 
-                          existingValue.value.toLowerCase() === card.value.toLowerCase() &&
-                          existingValue.definition === card.definition
-                        );
-                      
-                      return (
-                        <div
-                          key={card.value + card.definition}
-                          onClick={() => handleClickValueCard(card)}
-                          style={{
-                            background: getActiveCaseIndex() >= 0 ? '#fff' : '#f3f4f6',
-                            border: isAlreadyInCase ? '2px solid #16a34a' : '1px solid #d1d5db',
-                            borderRadius: 6,
-                            padding: '6px 12px',
-                            cursor: getActiveCaseIndex() >= 0 ? 'pointer' : 'not-allowed',
-                            transition: 'all 0.2s',
-                            opacity: getActiveCaseIndex() >= 0 ? 1 : 0.6,
-                            position: 'relative',
-                            fontSize: '0.85rem',
-                            fontWeight: 500,
-                            color: getActiveCaseIndex() >= 0 ? '#374151' : '#9ca3af',
-                            boxShadow: getActiveCaseIndex() >= 0 ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
-                          }}
-                          onMouseEnter={(e) => {
-                            if (getActiveCaseIndex() >= 0) {
-                              e.target.style.background = '#f3f4f6';
-                              e.target.style.borderColor = '#9ca3af';
-                            }
-                            if (isAlreadyInCase) {
-                              e.target.title = `Already added to Case ${activeCaseIndex + 1}`;
-                            }
-                          }}
-                          onMouseLeave={(e) => {
-                            if (getActiveCaseIndex() >= 0) {
-                              e.target.style.background = '#fff';
-                              e.target.style.borderColor = isAlreadyInCase ? '#16a34a' : '#d1d5db';
-                            }
-                          }}
-                        >
-                          {card.value}
-                          {isAlreadyInCase && (
-                            <div style={{
-                              position: 'absolute',
-                              top: '-4px',
-                              right: '-4px',
-                              background: '#16a34a',
-                              color: 'white',
-                              borderRadius: '50%',
-                              width: '14px',
-                              height: '14px',
-                              fontSize: '8px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              fontWeight: 'bold'
-                            }}>
-                              ✓
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Selected Values Section - Full Cards with Edit/Delete */}
-              {valueCards.length > 0 && (
-                <div style={{ 
-                  marginTop: '1.5rem',
-                  padding: '1.5rem',
-                  background: '#fff',
-                  borderRadius: 12,
-                  border: '1px solid #e5e7eb',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
-                }}>
-                  <div style={{ 
-                    color: '#16a34a', 
-                    fontWeight: 600, 
-                    fontSize: '1rem', 
-                    marginBottom: '1rem',
-                    textAlign: 'center'
-                  }}>
-                    Selected Values from Search
-                  </div>
-                  <div style={{ 
-                    display: 'grid', 
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', 
-                    gap: 16, 
-                    width: '100%'
-                  }}>
-                    {valueCards.map((card, idx) => (
-                      <div
-                        key={card.value + card.definition}
-                        style={{
-                          background: '#f8fafc',
-                          border: '1px solid #e5e7eb',
-                          borderRadius: 8,
-                          padding: '16px',
-                          position: 'relative',
-                          minHeight: '100px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                          justifyContent: 'space-between'
-                        }}
-                      >
-                        <div style={{
-                          fontWeight: 600,
-                          color: '#16a34a',
-                          fontSize: '1rem',
-                          marginBottom: '8px'
-                        }}>
-                          {card.value}
-                </div>
-                        <div style={{
-                          fontSize: '0.85rem',
-                          color: '#6b7280',
-                          lineHeight: 1.4,
-                          flex: 1,
-                          marginBottom: '12px',
-                          textAlign: 'left'
-                        }}>
-                          {card.definition}
-                        </div>
-                        <div style={{
-                          display: 'flex',
-                          gap: '8px',
-                          justifyContent: 'flex-end'
-                        }}>
-                          <button
-                            onClick={() => handleEditValue(idx)}
-                            style={{
-                              background: '#3b82f6',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: 4,
-                              padding: '4px 8px',
-                              fontSize: '0.75rem',
-                              cursor: 'pointer',
-                              transition: 'background 0.2s'
-                            }}
-                            onMouseEnter={(e) => e.target.style.background = '#2563eb'}
-                            onMouseLeave={(e) => e.target.style.background = '#3b82f6'}
-                                                     >
-                             Edit
-                           </button>
-                          <button
-                            onClick={() => handleDeleteValue(idx)}
-                            style={{
-                              background: '#dc2626',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: 4,
-                              padding: '4px 8px',
-                              fontSize: '0.75rem',
-                              cursor: 'pointer',
-                              transition: 'background 0.2s'
-                            }}
-                            onMouseEnter={(e) => e.target.style.background = '#b91c1c'}
-                            onMouseLeave={(e) => e.target.style.background = '#dc2626'}
-                                                     >
-                             Delete
-                           </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-            )}
-          </div>
-
-            {/* Tension Cards Section */}
-            <div style={{ 
-              width: '100%', 
-              maxWidth: 1100, 
-              margin: '0 auto', 
-              background: '#fff',
-              borderRadius: 18, 
-              border: '1.5px solid #e5e7eb', 
-              boxShadow: '0 2px 16px rgba(34,197,94,0.07)', 
-              padding: '2.2rem', 
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center' 
-            }}>
-              <div style={{ 
-                color: '#16a34a', 
-                fontWeight: 800, 
-                fontSize: '1.35rem', 
-                marginBottom: 18, 
-                letterSpacing: '-0.5px', 
-                textAlign: 'center', 
-                width: '100%' 
-              }}>
-                Tension Cards
-        </div>
-              <div style={{ 
-                color: '#388e5c', 
-                fontSize: '1.00rem', 
-                marginBottom: 22, 
-                fontWeight: 500, 
-                lineHeight: 1.6, 
-                textAlign: 'left', 
-                maxWidth: 700 
-              }}>
-                These represent trade-offs and conflicts between different values or goals in AI systems. Understanding these tensions helps in making informed decisions about AI design and implementation.
-              </div>
-              
-              {/* Search Tensions Button */}
-              <div style={{ marginBottom: '20px' }}>
+                </button>
                 <button
                   onClick={() => setShowTensionModal(true)}
                   style={{
@@ -1990,216 +1866,268 @@ const CaseContributionForm = () => {
                 </button>
               </div>
               
-              {/* Tension Pool Section - Compact Names Only */}
-              {tensionCards.length > 0 && (
+
+
+              {/* Selected Values from Search */}
+              {selectedValues.length > 0 && (
                 <div style={{ 
-                  marginTop: '2rem',
-                  padding: '1.5rem',
-                  background: '#f8fafc',
-                  borderRadius: 12,
-                  border: '1px solid #e5e7eb'
+                  marginTop: '1.5rem',
+                  display: 'flex',
+                  justifyContent: 'center'
                 }}>
                   <div style={{ 
-                    color: '#374151', 
-                    fontWeight: 600, 
-                    fontSize: '1rem', 
-                    marginBottom: '1rem',
-                    textAlign: 'center'
-                  }}>
-                    Tension Pool - Click any tension to add to {getActiveCaseText()}
-                  </div>
-                  {getActiveCaseIndex() === -1 && (
-                    <div style={{ 
-                      color: '#dc2626', 
-                      fontSize: '0.9rem', 
-                      marginBottom: '1rem',
-                      textAlign: 'center',
-                      padding: '0.5rem',
-                      background: '#fef2f2',
-                      borderRadius: '6px',
-                      border: '1px solid #fecaca'
-                    }}>
-                      No case is expanded. Please expand a case first to add tensions.
-                    </div>
-                  )}
-                  <div style={{ 
-                    display: 'flex', 
-                    flexWrap: 'wrap',
-                    gap: 8, 
+                    padding: '1.5rem',
+                    background: '#fff',
+                    borderRadius: 12,
+                    border: '1px solid #e5e7eb',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+                    maxWidth: '600px',
                     width: '100%'
                   }}>
-                    {tensionCards.map((card, idx) => {
-                      const activeCaseIndex = getActiveCaseIndex();
-                      const isAlreadyInCase = activeCaseIndex >= 0 && 
-                        caseCards[activeCaseIndex]?.tensions?.some(existingTension => 
-                          existingTension.value.toLowerCase() === card.value.toLowerCase() &&
-                          existingTension.definition === card.definition
-                        );
-                      
-                      return (
+                    <div style={{ 
+                      color: '#16a34a', 
+                      fontWeight: 700, 
+                      fontSize: '1.1rem', 
+                      marginBottom: '1rem',
+                      textAlign: 'center'
+                    }}>
+                      Selected Values from Search
+                    </div>
+                    <div style={{ 
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+                      gap: '16px',
+                      width: '100%',
+                      maxWidth: '800px',
+                      margin: '0 auto',
+                      textAlign: 'left'
+                    }}>
+                      {selectedValues.map((value, idx) => (
                         <div
-                          key={card.value + card.definition}
-                          onClick={() => handleClickTensionCard(card)}
+                          key={`value-${idx}-${value.value}`}
+                          className="value-card"
                           style={{
-                            background: getActiveCaseIndex() >= 0 ? '#fff' : '#f3f4f6',
-                            border: isAlreadyInCase ? '2px solid #16a34a' : '1px solid #d1d5db',
-                            borderRadius: 6,
-                            padding: '6px 12px',
-                            cursor: getActiveCaseIndex() >= 0 ? 'pointer' : 'not-allowed',
-                            transition: 'all 0.2s',
-                            opacity: getActiveCaseIndex() >= 0 ? 1 : 0.6,
-                            position: 'relative',
-                            fontSize: '0.85rem',
-                            fontWeight: 500,
-                            color: getActiveCaseIndex() >= 0 ? '#374151' : '#9ca3af',
-                            boxShadow: getActiveCaseIndex() >= 0 ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+                            background: '#fff',
+                            border: '1px solid #e5e7eb',
+                            borderRadius: 8,
+                            padding: '1rem',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                            minHeight: '120px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'space-between'
                           }}
-                          onMouseEnter={(e) => {
-                            if (getActiveCaseIndex() >= 0) {
-                              e.target.style.background = '#f3f4f6';
-                              e.target.style.borderColor = '#9ca3af';
-                            }
-                            if (isAlreadyInCase) {
-                              e.target.title = `Already added to Case ${activeCaseIndex + 1}`;
-                            }
-                          }}
-                          onMouseLeave={(e) => {
-                            if (getActiveCaseIndex() >= 0) {
-                              e.target.style.background = '#fff';
-                              e.target.style.borderColor = isAlreadyInCase ? '#16a34a' : '#d1d5db';
-                            }
-                          }}
+                          onClick={() => handleDirectAssignment('value', value)}
                         >
-                          {card.value}
-                          {isAlreadyInCase && (
-                            <div style={{
-                              position: 'absolute',
-                              top: '-4px',
-                              right: '-4px',
-                              background: '#16a34a',
-                              color: 'white',
-                              borderRadius: '50%',
-                              width: '14px',
-                              height: '14px',
-                              fontSize: '8px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              fontWeight: 'bold'
+                          <div style={{ 
+                            display: 'flex', 
+                            justifyContent: 'space-between', 
+                            alignItems: 'flex-start',
+                            marginBottom: '0.5rem',
+                          }}>
+                            <div style={{ 
+                              color: '#16a34a', 
+                              fontWeight: 600, 
+                              fontSize: '1rem',
+                              textAlign: 'left'
                             }}>
-                              ✓
+                              {value.value}
                             </div>
-                          )}
+                            <div style={{ display: 'flex', gap: '6px' }}>
+                              <button
+                                className="edit-btn"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  console.log('Edit value clicked for index:', idx);
+                                  console.log('Value to edit:', value);
+                                  setNewValue({ value: value.value, definition: value.definition });
+                                  setShowCreateValueModal(true);
+                                  setEditingSelectedValueIndex(idx); // Use selectedValues index
+                                  setEditingValueIndex(-1); // Not editing pool
+                                }}
+                                style={{
+                                  background: '#16a34a',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: 4,
+                                  padding: '4px 8px',
+                                  fontSize: '0.75rem',
+                                  cursor: 'pointer',
+                                  transition: 'background 0.2s ease'
+                                }}
+                              >
+                                Edit
+                              </button>
+                              <button
+                                className="delete-btn"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedValues(prev => prev.filter((_, i) => i !== idx));
+                                }}
+                                style={{
+                                  background: '#dc2626',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: 4,
+                                  padding: '4px 8px',
+                                  fontSize: '0.75rem',
+                                  cursor: 'pointer',
+                                  transition: 'background 0.2s ease'
+                                }}
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </div>
+                          <div style={{ 
+                            color: '#374151', 
+                            fontSize: '0.85rem', 
+                            lineHeight: 1.4,
+                            flex: 1,
+                            textShadow: 'none'
+                          }}>
+                            {value.definition}
+                          </div>
                         </div>
-                      );
-                    })}
+                      ))}
+                    </div>
                   </div>
                 </div>
               )}
 
               {/* Selected Tensions from Search */}
-              {tensionCards.length > 0 && (
+              {selectedTensions.length > 0 && (
                 <div style={{ 
-                  marginTop: '2rem',
-                  padding: '1.5rem',
-                  background: '#f8fafc',
-                  borderRadius: 12,
-                  border: '1px solid #e5e7eb'
+                  marginTop: '1.5rem',
+                  display: 'flex',
+                  justifyContent: 'center'
                 }}>
                   <div style={{ 
-                    color: '#16a34a', 
-                    fontWeight: 600, 
-                    fontSize: '1rem', 
-                    marginBottom: '1rem',
-                    textAlign: 'center'
-                  }}>
-                    Selected Tensions from Search
-                  </div>
-                  <div style={{ 
-                    display: 'grid', 
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', 
-                    gap: 16, 
+                    padding: '1.5rem',
+                    background: '#fff',
+                    borderRadius: 12,
+                    border: '1px solid #e5e7eb',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+                    maxWidth: '600px',
                     width: '100%'
                   }}>
-                    {tensionCards.map((card, idx) => (
-                      <div
-                        key={card.value + card.definition}
-                        style={{
-                          background: '#fff',
-                          border: '1px solid #e5e7eb',
-                          borderRadius: 8,
-                          padding: '16px',
-                          position: 'relative',
-                          minHeight: '100px',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          justifyContent: 'space-between'
-                        }}
-                      >
-                        <div style={{
-                          fontWeight: 600,
-                          color: '#16a34a',
-                          fontSize: '1rem',
-                          marginBottom: '8px'
-                        }}>
-                          {card.value}
+                    <div style={{ 
+                      color: '#16a34a', 
+                      fontWeight: 700, 
+                      fontSize: '1.1rem', 
+                      marginBottom: '1rem',
+                      textAlign: 'center'
+                    }}>
+                      Selected Tensions from Search
+                    </div>
+                    <div style={{ 
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+                      gap: '16px',
+                      width: '100%',
+                      maxWidth: '800px',
+                      margin: '0 auto',
+                      textAlign: 'left'
+                    }}>
+                      {selectedTensions.map((tension, idx) => (
+                        <div
+                          key={`tension-${idx}-${tension.value}`}
+                          className="tension-card"
+                          style={{
+                            background: '#fff',
+                            border: '1px solid #e5e7eb',
+                            borderRadius: 8,
+                            padding: '1rem',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                            minHeight: '120px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'space-between'
+                          }}
+                          onClick={() => handleDirectAssignment('tension', tension)}
+                        >
+                          <div style={{ 
+                            display: 'flex', 
+                            justifyContent: 'space-between', 
+                            alignItems: 'flex-start',
+                            marginBottom: '0.5rem'
+                          }}>
+                            <div style={{ 
+                              color: '#16a34a', 
+                              fontWeight: 600, 
+                              fontSize: '1rem' 
+                            }}>
+                              {tension.value}
+                            </div>
+                            <div style={{ display: 'flex', gap: '6px' }}>
+                              <button
+                                className="edit-btn"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  console.log('Edit tension clicked for index:', idx);
+                                  console.log('Tension to edit:', tension);
+                                  setNewTension({ value: tension.value, definition: tension.definition });
+                                  setShowCreateTensionModal(true);
+                                  setEditingSelectedTensionIndex(idx); // Use selectedTensions index
+                                  setEditingTensionIndex(-1); // Not editing pool
+                                }}
+                                style={{
+                                  background: '#16a34a',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: 4,
+                                  padding: '4px 8px',
+                                  fontSize: '0.75rem',
+                                  cursor: 'pointer',
+                                  transition: 'background 0.2s ease'
+                                }}
+                                onMouseEnter={(e) => e.target.style.background = '#15803d'}
+                                onMouseLeave={(e) => e.target.style.background = '#16a34a'}
+                              >
+                                Edit
+                              </button>
+                              <button
+                                className="delete-btn"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedTensions(prev => prev.filter((_, i) => i !== idx));
+                                }}
+                                style={{
+                                  background: '#dc2626',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: 4,
+                                  padding: '4px 8px',
+                                  fontSize: '0.75rem',
+                                  cursor: 'pointer',
+                                  transition: 'background 0.2s ease'
+                                }}
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </div>
+                          <div style={{ 
+                            color: '#374151', 
+                            fontSize: '0.85rem', 
+                            lineHeight: 1.4,
+                            flex: 1,
+                            textShadow: 'none'
+                          }}>
+                            {tension.definition}
+                          </div>
                         </div>
-                        <div style={{
-                          fontSize: '0.85rem',
-                          color: '#6b7280',
-                          lineHeight: 1.4,
-                          flex: 1,
-                          marginBottom: '12px',
-                          textAlign: 'left'
-                        }}>
-                          {card.definition}
-                        </div>
-                        <div style={{
-                          display: 'flex',
-                          gap: '8px',
-                          justifyContent: 'flex-end'
-                        }}>
-                          <button
-                            onClick={() => handleEditTension(idx)}
-                            style={{
-                              background: '#3b82f6',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: 4,
-                              padding: '4px 8px',
-                              fontSize: '0.75rem',
-                              cursor: 'pointer',
-                              transition: 'background 0.2s'
-                            }}
-                            onMouseEnter={(e) => e.target.style.background = '#2563eb'}
-                            onMouseLeave={(e) => e.target.style.background = '#3b82f6'}
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleDeleteTension(idx)}
-                            style={{
-                              background: '#dc2626',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: 4,
-                              padding: '4px 8px',
-                              fontSize: '0.75rem',
-                              cursor: 'pointer',
-                              transition: 'background 0.2s'
-                            }}
-                            onMouseEnter={(e) => e.target.style.background = '#b91c1c'}
-                            onMouseLeave={(e) => e.target.style.background = '#dc2626'}
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
                 </div>
               )}
-            </div>
+          </div>
+
 
             {/* Save All Section */}
             <div style={{ 
@@ -2207,7 +2135,7 @@ const CaseContributionForm = () => {
               maxWidth: 1100, 
               margin: '32px auto 0 auto', 
               padding: '2rem 0', 
-              textAlign: 'center' 
+              textAlign: 'center'
             }}>
               <button
                 className="green-btn polished-btn"
@@ -2229,9 +2157,80 @@ const CaseContributionForm = () => {
               >
                 Save All
               </button>
-              {saveError && <div style={{ color: '#dc2626', fontWeight: 600, marginTop: 8 }}>{saveError}</div>}
-              {saveSuccess && <div style={{ color: '#16a34a', fontWeight: 700, marginTop: 8 }}>Submission saved successfully!</div>}
             </div>
+            {saveError && <div style={{ color: '#dc2626', fontWeight: 600, marginTop: 8, textAlign: 'center' }}>{saveError}</div>}
+            {saveSuccess && <div style={{ color: '#16a34a', fontWeight: 700, marginTop: 8, textAlign: 'center' }}>Submission saved successfully!</div>}
+
+            {/* Confirmation Modal */}
+            {showConfirmModal && (
+              <div style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: 'rgba(0, 0, 0, 0.5)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 10000
+              }}>
+                <div style={{
+                  background: 'white',
+                  borderRadius: 12,
+                  padding: '2rem',
+                  maxWidth: '500px',
+                  width: '90%',
+                  textAlign: 'center'
+                }}>
+                  <h3 style={{ color: '#16a34a', fontWeight: 700, fontSize: '1.3rem', margin: '0 0 1rem 0' }}>
+                    Confirm Submission
+                  </h3>
+                  <p style={{ fontSize: '1rem', color: '#374151', marginBottom: '1.5rem', lineHeight: '1.5' }}>
+                    Submit {caseCards.length} case{caseCards.length !== 1 ? 's' : ''} under the application of "{selectedScenario === 'custom' ? customData.title : templateData.title}"?
+                  </p>
+                  <div style={{ 
+                    display: 'flex', 
+                    justifyContent: 'center', 
+                    gap: '12px'
+                  }}>
+                    <button
+                      onClick={() => setShowConfirmModal(false)}
+                      style={{
+                        background: '#6b7280',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: 8,
+                        padding: '0.6rem 1.2rem',
+                        fontSize: '0.9rem',
+                        fontWeight: 600,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleConfirmSave}
+                      style={{
+                        background: '#16a34a',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: 8,
+                        padding: '0.6rem 1.2rem',
+                        fontSize: '0.9rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        transition: 'background 0.2s'
+                      }}
+                      onMouseEnter={(e) => e.target.style.background = '#15803d'}
+                      onMouseLeave={(e) => e.target.style.background = '#16a34a'}
+                    >
+                      Confirm Submit
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -2284,6 +2283,22 @@ const CaseContributionForm = () => {
                 ×
               </button>
             </div>
+
+
+            {/* Instructions */}
+            <div style={{ 
+              background: '#f0f9ff', 
+              border: '1px solid #bae6fd', 
+              borderRadius: 8, 
+              padding: '1rem', 
+              marginBottom: '1.5rem',
+              fontSize: '0.9rem',
+              color: '#0c4a6e',
+              textAlign: 'left'
+            }}>
+              <strong>Instructions:</strong> Instructions: Select/create one or more values from the sections below. Your selected values will appear in the panel, where you can review and edit their definitions before adding them to your case(s).
+            </div>
+            
 
             {/* Selected Values Display */}
             {selectedValues.length > 0 && (
@@ -2499,9 +2514,10 @@ const CaseContributionForm = () => {
               >
                 Cancel
               </button>
+
               {selectedValues.length > 0 && (
                 <button
-                  onClick={addToValuePool}
+                  onClick={closeValueModal}
                   style={{
                     background: '#16a34a',
                     color: 'white',
@@ -2516,7 +2532,7 @@ const CaseContributionForm = () => {
                   onMouseEnter={(e) => e.target.style.background = '#15803d'}
                   onMouseLeave={(e) => e.target.style.background = '#16a34a'}
                 >
-                  Add to Value Pool ({selectedValues.length})
+                  Done ({selectedValues.length} selected)
                 </button>
               )}
             </div>
@@ -2581,9 +2597,10 @@ const CaseContributionForm = () => {
               padding: '1rem', 
               marginBottom: '1.5rem',
               fontSize: '0.9rem',
-              color: '#0c4a6e'
+              color: '#0c4a6e',
+              textAlign: 'left'
             }}>
-              <strong>Instructions:</strong> Select tensions from the sections below. You can choose multiple tensions. Selected tensions will appear in the "Selected Tensions from Search" section where you can edit them before adding to your tension pool.
+              <strong>Instructions:</strong> Instructions: Select/create one or more value tensions from the sections below. Your selected value tensions will appear in the panel, where you can review and edit their definitions before adding them to your case(s).
             </div>
 
             {/* Selected Tensions Display */}
@@ -2801,7 +2818,7 @@ const CaseContributionForm = () => {
               </button>
               {selectedTensions.length > 0 && (
                 <button
-                  onClick={addToTensionPool}
+                  onClick={closeTensionModal}
                   style={{
                     background: '#16a34a',
                     color: 'white',
@@ -2816,9 +2833,157 @@ const CaseContributionForm = () => {
                   onMouseEnter={(e) => e.target.style.background = '#15803d'}
                   onMouseLeave={(e) => e.target.style.background = '#16a34a'}
                 >
-                  Add to Value Tension Pool ({selectedTensions.length})
+                  Done ({selectedTensions.length} selected)
                 </button>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Case Selection Modal */}
+      {showCaseSelectionModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: 12,
+            padding: '2rem',
+            maxWidth: '500px',
+            width: '90%',
+            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)'
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              marginBottom: '1.5rem'
+            }}>
+              <div style={{
+                background: '#16a34a',
+                color: 'white',
+                borderRadius: '50%',
+                width: '32px',
+                height: '32px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginRight: '0.75rem',
+                fontSize: '1rem',
+                fontWeight: 'bold'
+              }}>
+                ?
+              </div>
+              <h3 style={{ 
+                color: '#16a34a', 
+                fontWeight: 700, 
+                fontSize: '1.2rem', 
+                margin: 0 
+              }}>
+                Select Case
+              </h3>
+              <button
+                onClick={() => setShowCaseSelectionModal(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '1.5rem',
+                  cursor: 'pointer',
+                  color: '#6b7280',
+                  marginLeft: 'auto'
+                }}
+              >
+                ×
+              </button>
+            </div>
+            
+            <div style={{
+              color: '#374151',
+              fontSize: '0.95rem',
+              lineHeight: 1.5,
+              marginBottom: '1.5rem'
+            }}>
+              Multiple cases are open. Please select which case to assign this {pendingAssignment?.type === 'value' ? 'value' : 'tension'} to:
+            </div>
+            
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px',
+              marginBottom: '1.5rem'
+            }}>
+              {getOpenCases().map(({ card, idx }) => (
+                <button
+                  key={idx}
+                  onClick={() => handleCaseSelection(idx)}
+                  style={{
+                    background: '#f8fafc',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: 8,
+                    padding: '1rem',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    textAlign: 'left'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.background = '#f0fdf4';
+                    e.target.style.borderColor = '#16a34a';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.background = '#f8fafc';
+                    e.target.style.borderColor = '#e5e7eb';
+                  }}
+                >
+                  <div style={{ 
+                    color: '#16a34a', 
+                    fontWeight: 600, 
+                    fontSize: '1rem',
+                    marginBottom: '0.5rem'
+                  }}>
+                    Case {idx + 1}
+                  </div>
+                  <div style={{ 
+                    color: '#374151', 
+                    fontSize: '0.9rem',
+                    lineHeight: 1.4
+                  }}>
+                    {card.summary || 'No theme specified'}
+                  </div>
+                </button>
+              ))}
+            </div>
+            
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'center'
+            }}>
+              <button
+                onClick={() => setShowCaseSelectionModal(false)}
+                style={{
+                  background: '#6b7280',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: 8,
+                  padding: '0.6rem 1.5rem',
+                  fontSize: '0.9rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'background 0.2s'
+                }}
+                onMouseEnter={(e) => e.target.style.background = '#4b5563'}
+                onMouseLeave={(e) => e.target.style.background = '#6b7280'}
+              >
+                Cancel
+              </button>
             </div>
           </div>
         </div>
@@ -2852,13 +3017,14 @@ const CaseContributionForm = () => {
               marginBottom: '1.5rem'
             }}>
               <h3 style={{ color: '#16a34a', fontWeight: 700, fontSize: '1.2rem', margin: 0 }}>
-                {editingValueIndex >= 0 ? 'Edit Value' : 'Create Your Own Value'}
+                {(editingValueIndex >= 0 || editingSelectedValueIndex >= 0) ? 'Edit Value' : 'Create Your Own Value'}
               </h3>
               <button
                 onClick={() => {
                   setShowCreateValueModal(false);
                   setNewValue({ value: '', definition: '' });
                   setEditingValueIndex(-1);
+                  setEditingSelectedValueIndex(-1);
                 }}
                 style={{
                   background: 'none',
@@ -2939,6 +3105,7 @@ const CaseContributionForm = () => {
                   setShowCreateValueModal(false);
                   setNewValue({ value: '', definition: '' });
                   setEditingValueIndex(-1);
+                  setEditingSelectedValueIndex(-1);
                 }}
                 style={{
                   background: '#6b7280',
@@ -2978,7 +3145,7 @@ const CaseContributionForm = () => {
                   }
                 }}
               >
-                {editingValueIndex >= 0 ? 'Update Value' : 'Create Value'}
+                {(editingValueIndex >= 0 || editingSelectedValueIndex >= 0) ? 'Update Value' : 'Create Value'}
               </button>
             </div>
           </div>
@@ -3110,6 +3277,121 @@ const CaseContributionForm = () => {
         </div>
       )}
 
+      {/* Validation Required Modal */}
+      {showValidationModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: 12,
+            padding: '2rem',
+            maxWidth: '500px',
+            width: '90%',
+            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)'
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              marginBottom: '1.5rem'
+            }}>
+              <div style={{
+                background: '#dc2626',
+                color: 'white',
+                borderRadius: '50%',
+                width: '32px',
+                height: '32px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginRight: '0.75rem',
+                fontSize: '1rem',
+                fontWeight: 'bold'
+              }}>
+                ✓
+              </div>
+              <h3 style={{ 
+                color: '#dc2626', 
+                fontWeight: 700, 
+                fontSize: '1.2rem', 
+                margin: 0 
+              }}>
+                Validation Required
+              </h3>
+              <button
+                onClick={() => setShowValidationModal(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '1.5rem',
+                  cursor: 'pointer',
+                  color: '#6b7280',
+                  marginLeft: 'auto'
+                }}
+              >
+                ×
+              </button>
+            </div>
+            
+            <div style={{
+              color: '#374151',
+              fontSize: '0.95rem',
+              lineHeight: 1.5,
+              marginBottom: '1.5rem'
+            }}>
+              Please complete all required fields before creating a new case.
+            </div>
+            
+            <div style={{
+              color: '#374151',
+              fontSize: '0.9rem',
+              lineHeight: 1.6,
+              marginBottom: '1.5rem',
+              whiteSpace: 'pre-line',
+              background: '#fef2f2',
+              padding: '1rem',
+              borderRadius: '8px',
+              border: '1px solid #fecaca'
+            }}>
+              {errorMessage}
+            </div>
+            
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'center'
+            }}>
+              <button
+                onClick={() => setShowValidationModal(false)}
+                style={{
+                  background: '#dc2626',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: 8,
+                  padding: '0.8rem 2rem',
+                  fontSize: '1rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'background 0.2s'
+                }}
+                onMouseEnter={(e) => e.target.style.background = '#b91c1c'}
+                onMouseLeave={(e) => e.target.style.background = '#dc2626'}
+              >
+                Understood
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Create Your Own Value Tension Modal */}
       {showCreateTensionModal && (
         <div style={{
@@ -3138,13 +3420,14 @@ const CaseContributionForm = () => {
               marginBottom: '1.5rem'
             }}>
               <h3 style={{ color: '#16a34a', fontWeight: 700, fontSize: '1.2rem', margin: 0 }}>
-                {editingTensionIndex >= 0 ? 'Edit Tension' : 'Create Your Own Value Tension'}
+                {(editingTensionIndex >= 0 || editingSelectedTensionIndex >= 0) ? 'Edit Tension' : 'Create Your Own Value Tension'}
               </h3>
               <button
                 onClick={() => {
                   setShowCreateTensionModal(false);
                   setNewTension({ value: '', definition: '' });
                   setEditingTensionIndex(-1);
+                  setEditingSelectedTensionIndex(-1);
                 }}
                 style={{
                   background: 'none',
@@ -3225,6 +3508,7 @@ const CaseContributionForm = () => {
                   setShowCreateTensionModal(false);
                   setNewTension({ value: '', definition: '' });
                   setEditingTensionIndex(-1);
+                  setEditingSelectedTensionIndex(-1);
                 }}
                 style={{
                   background: '#6b7280',
@@ -3264,7 +3548,7 @@ const CaseContributionForm = () => {
                   }
                 }}
               >
-                {editingTensionIndex >= 0 ? 'Update Tension' : 'Create Tension'}
+                {(editingTensionIndex >= 0 || editingSelectedTensionIndex >= 0) ? 'Update Tension' : 'Create Tension'}
               </button>
             </div>
           </div>

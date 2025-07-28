@@ -83,7 +83,7 @@ function DraggableValueCard({ card, onDelete, onEdit, onClick }) {
           boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
           padding: '12px',
           minWidth: 0,
-          maxWidth: 240,
+          maxWidth: 350,
           width: '100%',
           margin: '0 auto',
           display: 'flex',
@@ -258,7 +258,7 @@ function DraggableTensionCard({ card, onDelete, onEdit, onClick }) {
           boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
           padding: '12px',
           minWidth: 0,
-          maxWidth: 240,
+          maxWidth: 350,
           width: '100%',
           margin: '0 auto',
           display: 'flex',
@@ -314,7 +314,7 @@ function DraggableTensionCard({ card, onDelete, onEdit, onClick }) {
         boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
         padding: '12px',
         minWidth: 0,
-        maxWidth: 240,
+        maxWidth: 350,
         width: '100%',
         margin: '0 auto',
         display: 'flex',
@@ -530,6 +530,12 @@ const FocusGroupPage = () => {
   
   // Helper to get the open case index (or -1 if none)
   const getOpenCaseIdx = () => {
+    // Check if there are any cases and if the expanded case index is valid
+    if (caseCards.length === 0) {
+      console.log('getOpenCaseIdx: No cases available');
+      return -1;
+    }
+    
     const result = (typeof expandedCaseIdx === 'number' && expandedCaseIdx >= 0 && expandedCaseIdx < caseCards.length ? expandedCaseIdx : -1);
     console.log('getOpenCaseIdx:', result, 'expandedCaseIdx:', expandedCaseIdx, 'caseCards.length:', caseCards.length);
     return result;
@@ -541,10 +547,27 @@ const FocusGroupPage = () => {
     setClickToAddError('');
     const openIdx = getOpenCaseIdx();
     if (openIdx === -1) {
-      setErrorModal({ isOpen: true, message: 'Please open a case before assigning a value. The value must be linked to a specific case.' });
+      setErrorModal({ isOpen: true, message: 'Please open a case in "The Collection of Cases" section before assigning a value. Click on a case to expand it, then you can assign values and tensions to that specific case.' });
       return;
     }
-    setCaseCards(cards => cards.map((c, i) => i === openIdx ? { ...c, values: c.values.some(v => v.value === card.value) ? c.values : [...c.values, { value: card.value, definition: card.definition }] } : c));
+    console.log('Assigning value to case index:', openIdx);
+    setCaseCards(cards => {
+      const updatedCards = cards.map((c, i) => {
+        if (i === openIdx) {
+          const alreadyHasValue = c.values.some(v => v.value === card.value);
+          if (alreadyHasValue) {
+            console.log('Value already exists in case, not adding duplicate');
+            return c;
+          } else {
+            console.log('Adding value to case:', card.value);
+            return { ...c, values: [...c.values, { value: card.value, definition: card.definition }] };
+          }
+        }
+        return c;
+      });
+      console.log('Updated case cards:', updatedCards);
+      return updatedCards;
+    });
   };
 
   // Click handler for tension cards
@@ -553,10 +576,27 @@ const FocusGroupPage = () => {
     setClickToAddError('');
     const openIdx = getOpenCaseIdx();
     if (openIdx === -1) {
-      setErrorModal({ isOpen: true, message: 'Please open a case before assigning a value. The value must be linked to a specific case.' });
+      setErrorModal({ isOpen: true, message: 'Please open a case in "The Collection of Cases" section before assigning a tension. Click on a case to expand it, then you can assign values and tensions to that specific case.' });
       return;
     }
-    setCaseCards(cards => cards.map((c, i) => i === openIdx ? { ...c, tensions: c.tensions.some(t => t.value === card.value) ? c.tensions : [...c.tensions, { value: card.value, definition: card.definition }] } : c));
+    console.log('Assigning tension to case index:', openIdx);
+    setCaseCards(cards => {
+      const updatedCards = cards.map((c, i) => {
+        if (i === openIdx) {
+          const alreadyHasTension = c.tensions.some(t => t.value === card.value);
+          if (alreadyHasTension) {
+            console.log('Tension already exists in case, not adding duplicate');
+            return c;
+          } else {
+            console.log('Adding tension to case:', card.value);
+            return { ...c, tensions: [...c.tensions, { value: card.value, definition: card.definition }] };
+          }
+        }
+        return c;
+      });
+      console.log('Updated case cards:', updatedCards);
+      return updatedCards;
+    });
   };
 
   // Function to close error modal
@@ -569,6 +609,7 @@ const FocusGroupPage = () => {
   const [saveAllError, setSaveAllError] = useState('');
   const [saveAllSuccess, setSaveAllSuccess] = useState(false);
   const [submissionCompleted, setSubmissionCompleted] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
   // Add state for custom concept card
   const [customConceptCard, setCustomConceptCard] = useState({
     title: '',
@@ -603,9 +644,17 @@ const FocusGroupPage = () => {
   const [newTension, setNewTension] = useState({ value: '', definition: '' });
   const [editingValueIndex, setEditingValueIndex] = useState(-1);
   const [editingTensionIndex, setEditingTensionIndex] = useState(-1);
+  const [editingSelectedValueIndex, setEditingSelectedValueIndex] = useState(-1);
+  const [editingSelectedTensionIndex, setEditingSelectedTensionIndex] = useState(-1);
 
   // State for example modal
   const [showExampleModal, setShowExampleModal] = useState(false);
+  
+  // State for adding new value and tension cards
+  const [showAddValue, setShowAddValue] = useState(false);
+  const [showAddTension, setShowAddTension] = useState(false);
+  const [newValueDef, setNewValueDef] = useState('');
+  const [newTensionDef, setNewTensionDef] = useState('');
   
   console.log('FocusGroupPage component rendering, showExampleModal:', showExampleModal);
   
@@ -617,7 +666,7 @@ const FocusGroupPage = () => {
       grade: "6th Grade",
       date: "2025-03-15",
       impactedPop: "Students with IEPs (e.g., ADHD)",
-      caseText: "During a Language Arts class, I received an alert from the AI system indicating that one of my students appeared disengaged, based on reduced participation and limited eye contact. The system suggested that I step in and offer support. However, I knew this student had an IEP related to ADHD, and their engagement often looks different from what the AI was trained to detect. Instead of calling attention to the student in front of the class, I quietly made a note of the alert and observed their behavior throughout the lesson. The student was actually following along—just in their own way. Later, I documented my observations and followed up privately. This experience made me reflect on how the AI system’s indicators might not account for neurodiverse learning profiles. I raised the concern with our IT team, advocating for adjustments that would better support all learners without making assumptions. It's a reminder that while these tools can be helpful, they need to be flexible enough to respect student privacy and the varied ways students show engagement.",
+      caseText: "During a Language Arts class, I received an alert from the AI system indicating that one of my students appeared disengaged, based on reduced participation and limited eye contact. The system suggested that I step in and offer support. However, I knew this student had an IEP related to ADHD, and their engagement often looks different from what the AI was trained to detect. Instead of calling attention to the student in front of the class, I quietly made a note of the alert and observed their behavior throughout the lesson. The student was actually following along—just in their own way. Later, I documented my observations and followed up privately. This experience made me reflect on how the AI system's indicators might not account for neurodiverse learning profiles. I raised the concern with our IT team, advocating for adjustments that would better support all learners without making assumptions. It's a reminder that while these tools can be helpful, they need to be flexible enough to respect student privacy and the varied ways students show engagement.",
       values: [
         { value: "Fairness", definition: "Ensuring that all students are treated equitably, with consideration for individual differences and needs" },
         { value: "Student Privacy", definition: "Protecting students' personal information and dignity" },
@@ -724,6 +773,10 @@ const FocusGroupPage = () => {
   };
 
   const handleCreateValue = () => {
+    console.log('handleCreateValue called');
+    console.log('editingSelectedValueIndex:', editingSelectedValueIndex);
+    console.log('editingValueIndex:', editingValueIndex);
+    console.log('newValue:', newValue);
     if (newValue.value.trim() && newValue.definition.trim()) {
       const updatedValue = {
         value: newValue.value.trim(),
@@ -736,6 +789,19 @@ const FocusGroupPage = () => {
           idx === editingValueIndex ? updatedValue : value
         ));
         setEditingValueIndex(-1);
+      } else if (editingSelectedValueIndex >= 0) {
+        // Editing a selected value
+        console.log('Updating selected value at index:', editingSelectedValueIndex);
+        console.log('Updated value:', updatedValue);
+        setSelectedValues(prev => {
+          console.log('Previous selectedValues:', prev);
+          const newSelectedValues = prev.map((value, idx) => 
+            idx === editingSelectedValueIndex ? updatedValue : value
+          );
+          console.log('New selectedValues:', newSelectedValues);
+          return newSelectedValues;
+        });
+        setEditingSelectedValueIndex(-1);
       } else {
         // Adding a new value to user history
         setUserValueHistory(prev => [...prev, updatedValue]);
@@ -748,6 +814,10 @@ const FocusGroupPage = () => {
   };
 
   const handleCreateTension = () => {
+    console.log('handleCreateTension called');
+    console.log('editingSelectedTensionIndex:', editingSelectedTensionIndex);
+    console.log('editingTensionIndex:', editingTensionIndex);
+    console.log('newTension:', newTension);
     if (newTension.value.trim() && newTension.definition.trim()) {
       const updatedTension = {
         value: newTension.value.trim(),
@@ -760,6 +830,12 @@ const FocusGroupPage = () => {
           idx === editingTensionIndex ? updatedTension : tension
         ));
         setEditingTensionIndex(-1);
+      } else if (editingSelectedTensionIndex >= 0) {
+        // Editing a selected tension
+        setSelectedTensions(prev => prev.map((tension, idx) => 
+          idx === editingSelectedTensionIndex ? updatedTension : tension
+        ));
+        setEditingSelectedTensionIndex(-1);
       } else {
         // Adding a new tension to user history
         setUserTensionHistory(prev => [...prev, updatedTension]);
@@ -825,6 +901,19 @@ const FocusGroupPage = () => {
 
   const handleDeleteTension = (index) => {
     setUserTensionHistory(prev => prev.filter((_, idx) => idx !== index));
+  };
+
+  // Edit handlers for value and tension cards in the pools
+  const handleEditValueCard = (index, newValue, newDefinition) => {
+    setValueCards(cards => cards.map((card, i) => 
+      i === index ? { ...card, value: newValue, definition: newDefinition } : card
+    ));
+  };
+
+  const handleEditTensionCard = (index, newValue, newDefinition) => {
+    setTensionCards(cards => cards.map((card, i) => 
+      i === index ? { ...card, value: newValue, definition: newDefinition } : card
+    ));
   };
 
   // Fetch user's value and tension history
@@ -917,6 +1006,70 @@ const FocusGroupPage = () => {
     setSubmissionCompleted(false);
   };
 
+  const handleConfirmSave = async () => {
+    console.log('handleConfirmSave called');
+    setShowConfirmModal(false);
+    
+    let conceptCard = {};
+    const selectedCase = exampleCases[selectedCaseIdx];
+    if (selectedCase.title === 'Create Your Own') {
+      conceptCard = customConceptCard;
+    } else {
+      conceptCard = conceptCardTemplates[selectedCase.title];
+    }
+    const group = groupName || '';
+    const cases = caseCards.map(card => ({
+      summary: card.summary,
+      subject: card.subject,
+      grade: card.grade,
+      date: card.date,
+      caseText: card.caseText,
+      values: card.values,
+      tensions: card.tensions,
+      status: 'pending',
+      group
+    }));
+    const submission = {
+      conceptCard,
+      cases,
+      username: user.username,
+      email: user.email,
+      submittedAt: new Date().toISOString(),
+      status: 'pending',
+      group: groupName || ''
+    };
+    
+    console.log('Submitting data:', submission);
+    
+    try {
+      const res = await fetch('/api/case-studies-focus-group', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(submission)
+      });
+      
+      console.log('Response status:', res.status);
+      console.log('Response ok:', res.ok);
+      
+      if (res.ok) {
+        console.log('Submission successful');
+        setSaveAllSuccess(true);
+        setSaveAllError('');
+        setSubmissionCompleted(true);
+        // Clear the page for resubmission
+        resetFormForNewSubmission();
+      } else {
+        console.log('Submission failed with status:', res.status);
+        const errorText = await res.text();
+        console.log('Error response:', errorText);
+        setSaveAllError('Failed to save. Please try again.');
+      }
+    } catch (err) {
+      console.log('Network error:', err);
+      setSaveAllError('Failed to save. Please try again.');
+    }
+  };
+
   // Render all notes and value fields (values/tensions only if showValues is true)
   const renderNotesAndValues = (showValues) => (
     <div style={{ display: 'flex', gap: 32, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 32 }}>
@@ -953,6 +1106,7 @@ const FocusGroupPage = () => {
   // Phase 1: Select case, show all notes (no values/tensions)
   console.log('Current phase:', phase);
   if (phase === 1) {
+    console.log('Rendering Phase 1 content');
     const selectedCase = exampleCases[selectedCaseIdx];
     const blankTemplate = {
       title: '',
@@ -973,6 +1127,78 @@ const FocusGroupPage = () => {
 
     return (
       <DndProvider backend={HTML5Backend}>
+
+        
+        {/* Confirmation Modal - Moved to beginning */}
+        {showConfirmModal && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999999
+          }}>
+            <div style={{
+              background: 'white',
+              borderRadius: 12,
+              padding: '2rem',
+              maxWidth: '500px',
+              width: '90%',
+              textAlign: 'center'
+            }}>
+              <h3 style={{ color: '#16a34a', fontWeight: 700, fontSize: '1.3rem', margin: '0 0 1rem 0' }}>
+                Confirm Submission
+              </h3>
+              <p style={{ fontSize: '1rem', color: '#374151', marginBottom: '1.5rem', lineHeight: '1.5' }}>
+                Submit {caseCards.length} case{caseCards.length !== 1 ? 's' : ''} to the group "{groupName}"?
+              </p>
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'center', 
+                gap: '12px'
+              }}>
+                <button
+                  onClick={() => setShowConfirmModal(false)}
+                  style={{
+                    background: '#6b7280',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: 8,
+                    padding: '0.6rem 1.2rem',
+                    fontSize: '0.9rem',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmSave}
+                  style={{
+                    background: '#16a34a',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: 8,
+                    padding: '0.6rem 1.2rem',
+                    fontSize: '0.9rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    transition: 'background 0.2s'
+                  }}
+                  onMouseEnter={(e) => e.target.style.background = '#15803d'}
+                  onMouseLeave={(e) => e.target.style.background = '#16a34a'}
+                >
+                  Confirm Submit
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         {/* Create Tension Modal */}
         {showCreateTensionModal && (
           <div style={{
@@ -985,7 +1211,7 @@ const FocusGroupPage = () => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            zIndex: 10000
+            zIndex: 100001
           }}>
             <div style={{
               background: 'white',
@@ -1001,13 +1227,14 @@ const FocusGroupPage = () => {
                 marginBottom: '1.5rem'
               }}>
                 <h3 style={{ color: '#16a34a', fontWeight: 700, fontSize: '1.2rem', margin: 0 }}>
-                  {editingTensionIndex >= 0 ? 'Edit Tension' : 'Create Your Own Tension'}
+                  {(editingTensionIndex >= 0 || editingSelectedTensionIndex >= 0) ? 'Edit Tension' : 'Create Your Own Tension'}
                 </h3>
                 <button
                   onClick={() => {
                     setShowCreateTensionModal(false);
                     setNewTension({ value: '', definition: '' });
                     setEditingTensionIndex(-1);
+                    setEditingSelectedTensionIndex(-1);
                   }}
                   style={{
                     background: 'none',
@@ -1084,6 +1311,7 @@ const FocusGroupPage = () => {
                     setShowCreateTensionModal(false);
                     setNewTension({ value: '', definition: '' });
                     setEditingTensionIndex(-1);
+                    setEditingSelectedTensionIndex(-1);
                   }}
                   style={{
                     background: '#fff',
@@ -1112,7 +1340,7 @@ const FocusGroupPage = () => {
                     cursor: !newTension.value.trim() || !newTension.definition.trim() ? 'not-allowed' : 'pointer'
                   }}
                 >
-                  {editingTensionIndex >= 0 ? 'Update Tension' : 'Create Tension'}
+                  {(editingTensionIndex >= 0 || editingSelectedTensionIndex >= 0) ? 'Update Tension' : 'Create Tension'}
                 </button>
               </div>
             </div>
@@ -1598,6 +1826,102 @@ const FocusGroupPage = () => {
                     </div>
                   </div>
 
+                  {/* Selected Values Panel */}
+                  {console.log('selectedValues.length:', selectedValues.length)}
+                  {selectedValues.length > 0 && (
+                    <div style={{ marginBottom: '1.5rem' }}>
+                      <h4 style={{ color: '#16a34a', fontWeight: 600, marginBottom: '1rem' }}>
+                        Selected Values from Search ({selectedValues.length})
+                      </h4>
+                      <div style={{ 
+                        display: 'grid', 
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', 
+                        gap: '12px' 
+                      }}>
+                        {selectedValues.map((value, idx) => (
+                          <div
+                            key={idx}
+                            style={{
+                              background: '#fff',
+                              border: '1px solid #d1d5db',
+                              borderRadius: 8,
+                              padding: '12px',
+                              position: 'relative',
+                              transition: 'all 0.2s'
+                            }}
+                          >
+                            <div style={{ 
+                              fontWeight: 600, 
+                              color: '#16a34a', 
+                              marginBottom: '4px',
+                              textAlign: 'left'
+                            }}>
+                              {value.value}
+                            </div>
+                            <div style={{ 
+                              fontSize: '0.85rem', 
+                              color: '#374151', 
+                              lineHeight: 1.4, 
+                              textAlign: 'left',
+                              marginBottom: '8px'
+                            }}>
+                              {value.definition}
+                            </div>
+                            <div style={{
+                              position: 'absolute',
+                              top: '0.5rem',
+                              right: '0.5rem',
+                              display: 'flex',
+                              gap: '0.25rem'
+                            }}>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  console.log('Edit value clicked for index:', idx);
+                                  console.log('Value to edit:', value);
+                                  console.log('Setting editingSelectedValueIndex to:', idx);
+                                  setNewValue({ value: value.value, definition: value.definition });
+                                  setShowCreateValueModal(true);
+                                  setEditingSelectedValueIndex(idx);
+                                  setEditingValueIndex(-1);
+                                  console.log('Edit button click handler completed');
+                                }}
+                                style={{
+                                  background: '#16a34a',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: 4,
+                                  padding: '0.25rem 0.5rem',
+                                  fontSize: '0.75rem',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedValues(prev => prev.filter((_, index) => index !== idx));
+                                }}
+                                style={{
+                                  background: '#dc2626',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: 4,
+                                  padding: '0.25rem 0.5rem',
+                                  fontSize: '0.75rem',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Create Your Own Value Button */}
                   <div style={{ marginBottom: '1.5rem', textAlign: 'center' }}>
                     <button
@@ -1695,13 +2019,15 @@ const FocusGroupPage = () => {
                     marginBottom: '1.5rem'
                   }}>
                     <h3 style={{ color: '#16a34a', fontWeight: 700, fontSize: '1.2rem', margin: 0 }}>
-                      {editingValueIndex >= 0 ? 'Edit Value' : 'Create Your Own Value'}
+                      {console.log('Modal title check - editingValueIndex:', editingValueIndex, 'editingSelectedValueIndex:', editingSelectedValueIndex)}
+                      {(editingValueIndex >= 0 || editingSelectedValueIndex >= 0) ? 'Edit Value' : 'Create Your Own Value'}
                     </h3>
                     <button
                       onClick={() => {
                         setShowCreateValueModal(false);
                         setNewValue({ value: '', definition: '' });
                         setEditingValueIndex(-1);
+                        setEditingSelectedValueIndex(-1);
                       }}
                       style={{
                         background: 'none',
@@ -1782,6 +2108,7 @@ const FocusGroupPage = () => {
                         setShowCreateValueModal(false);
                         setNewValue({ value: '', definition: '' });
                         setEditingValueIndex(-1);
+                        setEditingSelectedValueIndex(-1);
                       }}
                       style={{
                         background: '#6b7280',
@@ -1821,7 +2148,7 @@ const FocusGroupPage = () => {
                         }
                       }}
                     >
-                      {editingValueIndex >= 0 ? 'Update Value' : 'Create Value'}
+                      {(editingValueIndex >= 0 || editingSelectedValueIndex >= 0) ? 'Update Value' : 'Create Value'}
                     </button>
                   </div>
                 </div>
@@ -2529,6 +2856,7 @@ const FocusGroupPage = () => {
                         card={card}
                         isCustom={idx >= 3}
                         onDelete={() => setValueCards(cards => cards.filter((c, i) => i !== idx))}
+                        onEdit={(newValue, newDefinition) => handleEditValueCard(idx, newValue, newDefinition)}
                         onClick={() => handleClickValueCard(card)}
                       />
                     ))}
@@ -2570,6 +2898,7 @@ const FocusGroupPage = () => {
                         card={card}
                         isCustom={idx >= 2}
                         onDelete={() => setTensionCards(cards => cards.filter((c, i) => i !== idx))}
+                        onEdit={(newValue, newDefinition) => handleEditTensionCard(idx, newValue, newDefinition)}
                         onClick={() => handleClickTensionCard(card)}
                       />
                     ))}
@@ -2606,18 +2935,26 @@ const FocusGroupPage = () => {
                   className="green-btn polished-btn"
                     style={{ fontSize: '1rem', padding: '0.8rem 2.5rem', borderRadius: 12, fontWeight: 800, background: '#16a34a', color: '#fff', border: 'none', boxShadow: '0 2px 8px rgba(34,197,94,0.07)', cursor: 'pointer' }}
                   onClick={async () => {
-                      if (submissionCompleted) {
-                        resetFormForNewSubmission();
-                        return;
-                      }
-                      
+                    console.log('Save All button clicked!');
+                    console.log('submissionCompleted:', submissionCompleted);
+                    console.log('user:', user);
+                    
+                    if (submissionCompleted) {
+                      console.log('Resetting form for new submission');
+                      resetFormForNewSubmission();
+                      return;
+                    }
+                    
+                    console.log('Starting validation...');
                     setSaveAllError('');
                     setSaveAllSuccess(false);
                     // Validate user
                     if (!user || !user.username || !user.email) {
+                      console.log('User validation failed');
                       setSaveAllError('You must be logged in to submit.');
                       return;
                     }
+                    console.log('User validation passed');
                       
                       // Validate AI Application Card for "Create Your Own"
                       if (exampleCases[selectedCaseIdx].title === 'Create Your Own') {
@@ -2634,68 +2971,53 @@ const FocusGroupPage = () => {
                     // Validate all cases
                     let hasError = false;
                     const newCaseErrors = {};
+                    console.log('Validating cases:', caseCards);
+                    console.log('Number of cases:', caseCards.length);
+                    
                     caseCards.forEach((card, idx) => {
+                      console.log(`Validating case ${idx}:`, card);
                       const errors = {};
-                      if (!card.summary || card.summary.trim() === '') errors.summary = 'Short Summary is required.';
-                      if (!card.caseText || card.caseText.trim() === '') errors.caseText = 'Case is required.';
-                      if (!card.values || card.values.length === 0) errors.values = 'At least one Value is required.';
+                      if (!card.summary || card.summary.trim() === '') {
+                        errors.summary = 'Case Theme is required.';
+                        console.log(`Case ${idx}: Missing summary`);
+                      }
+                      if (!card.caseText || card.caseText.trim() === '') {
+                        errors.caseText = 'Case Narrative is required.';
+                        console.log(`Case ${idx}: Missing caseText`);
+                      }
+                      if (!card.values || card.values.length === 0) {
+                        errors.values = 'At least one Value is required.';
+                        console.log(`Case ${idx}: Missing values. Current values:`, card.values);
+                      }
                       if (Object.keys(errors).length > 0) {
                         newCaseErrors[idx] = errors;
                         hasError = true;
+                        console.log(`Case ${idx} has errors:`, errors);
+                      } else {
+                        console.log(`Case ${idx}: No errors`);
                       }
                     });
                     setCaseErrors(newCaseErrors);
                     if (hasError) {
                       setSaveAllError('Please fix errors in all cases before submitting.');
+                      console.log('Validation failed. Errors:', newCaseErrors);
                       return;
                     }
-                    let conceptCard = {};
-                    const selectedCase = exampleCases[selectedCaseIdx];
-                    if (selectedCase.title === 'Create Your Own') {
-                      conceptCard = customConceptCard;
-                    } else {
-                    conceptCard = conceptCardTemplates[selectedCase.title];
-                    }
-                    const group = groupName || '';
-                    const cases = caseCards.map(card => ({
-                      summary: card.summary,
-                      subject: card.subject,
-                      grade: card.grade,
-                      date: card.date,
-                      caseText: card.caseText,
-                      values: card.values,
-                      tensions: card.tensions,
-                      status: 'pending',
-                      group
-                    }));
-                    const submission = {
-                      conceptCard,
-                      cases,
-                      username: user.username,
-                      email: user.email,
-                        submittedAt: new Date().toISOString(),
-                        status: 'pending',
-                        group: groupName || ''
-                    };
-                    try {
-                      const res = await fetch('/api/case-studies-focus-group', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(submission)
-                      });
-                      if (res.ok) {
-                        setSaveAllSuccess(true);
-                        setSaveAllError('');
-                          setSubmissionCompleted(true);
-                      } else {
-                        setSaveAllError('Failed to save. Please try again.');
-                      }
-                    } catch (err) {
-                      setSaveAllError('Failed to save. Please try again.');
-                    }
+                    
+                    console.log('Validation passed. Showing confirmation modal.');
+                    console.log('Setting showConfirmModal to true');
+                    console.log('Current showConfirmModal before setting:', showConfirmModal);
+                    
+                    // Show confirmation modal
+                    setShowConfirmModal(true);
+                    
+                    // Check if state was updated
+                    setTimeout(() => {
+                      console.log('showConfirmModal after setting:', showConfirmModal);
+                    }, 100);
                   }}
                 >
-                    {submissionCompleted ? 'Submit Another' : 'Save All'}
+                    Save All
                 </button>
                 
                 <button
@@ -2708,7 +3030,7 @@ const FocusGroupPage = () => {
                 </div>
                 
                 {saveAllError && <div style={{ color: '#dc2626', fontWeight: 600, marginTop: 8 }}>{saveAllError}</div>}
-                {saveAllSuccess && <div style={{ color: '#16a34a', fontWeight: 700, marginTop: 8 }}>Submission saved successfully!</div>}
+                {saveAllSuccess && <div style={{ color: '#16a34a', fontWeight: 700, marginTop: 8 }}>✅ Submission saved successfully! Your case studies have been submitted to the group.</div>}
               </div>
             </>
           </div>
@@ -2719,6 +3041,7 @@ const FocusGroupPage = () => {
           onClose={closeErrorModal} 
         />
         {/* Search Tensions Modal - Moved inside main component */}
+        {console.log('Rendering tension modal, showTensionModal:', showTensionModal)}
         {showTensionModal && (
           <div style={{
             position: 'fixed',
@@ -2922,6 +3245,100 @@ const FocusGroupPage = () => {
                 </div>
               </div>
 
+              {/* Selected Tensions Panel */}
+              {console.log('selectedTensions.length:', selectedTensions.length)}
+              {selectedTensions.length > 0 && (
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <h4 style={{ color: '#16a34a', fontWeight: 600, marginBottom: '1rem' }}>
+                    Selected Tensions from Search ({selectedTensions.length})
+                  </h4>
+                  <div style={{ 
+                    display: 'grid', 
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', 
+                    gap: '12px' 
+                  }}>
+                    {selectedTensions.map((tension, idx) => (
+                      <div
+                        key={idx}
+                        style={{
+                          background: '#fff',
+                          border: '1px solid #d1d5db',
+                          borderRadius: 8,
+                          padding: '12px',
+                          position: 'relative',
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        <div style={{ 
+                          fontWeight: 600, 
+                          color: '#16a34a', 
+                          marginBottom: '4px',
+                          textAlign: 'left'
+                        }}>
+                          {tension.value}
+                        </div>
+                        <div style={{ 
+                          fontSize: '0.85rem', 
+                          color: '#374151', 
+                          lineHeight: 1.4, 
+                          textAlign: 'left',
+                          marginBottom: '8px'
+                        }}>
+                          {tension.definition}
+                        </div>
+                        <div style={{
+                          position: 'absolute',
+                          top: '0.5rem',
+                          right: '0.5rem',
+                          display: 'flex',
+                          gap: '0.25rem'
+                        }}>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              console.log('Edit tension clicked for index:', idx);
+                              console.log('Tension to edit:', tension);
+                              setNewTension({ value: tension.value, definition: tension.definition });
+                              setShowCreateTensionModal(true);
+                              setEditingSelectedTensionIndex(idx);
+                              setEditingTensionIndex(-1);
+                            }}
+                            style={{
+                              background: '#16a34a',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: 4,
+                              padding: '0.25rem 0.5rem',
+                              fontSize: '0.75rem',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedTensions(prev => prev.filter((_, index) => index !== idx));
+                            }}
+                            style={{
+                              background: '#dc2626',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: 4,
+                              padding: '0.25rem 0.5rem',
+                              fontSize: '0.75rem',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Create Your Own Tension Button */}
               <div style={{ marginBottom: '1.5rem', textAlign: 'center' }}>
                 <button
@@ -3011,13 +3428,14 @@ const FocusGroupPage = () => {
               <div style={{ color: '#16a34a', fontWeight: 800, fontSize: '1.20rem', textAlign: 'center', marginBottom: 18, letterSpacing: '-0.5px' }}>What are Responsible AI values?</div>
               <div style={{ color: '#388e5c', textAlign: 'center', fontSize: '1.00rem', marginBottom: 22, fontWeight: 500, lineHeight: 1.6 }}>These are ethical principles that guide how AI should be designed, used, and governed to benefit people and society. They help ensure AI is fair, safe, transparent, and aligned with human needs and rights.</div>
               <div style={{ color: '#16a34a', fontWeight: 700, fontSize: '1.13rem', marginBottom: 10, textAlign: 'center' }}>Value Cards</div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, width: '100%', marginBottom: 18 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12, width: '100%', marginBottom: 18 }}>
                 {valueCards.map((card, idx) => (
                   <DraggableValueCard
                     key={card.value + card.definition}
                     card={card}
                     isCustom={idx >= 3}
                     onDelete={() => setValueCards(cards => cards.filter((c, i) => i !== idx))}
+                    onEdit={(newValue, newDefinition) => handleEditValueCard(idx, newValue, newDefinition)}
                     onClick={() => handleClickValueCard(card)}
                   />
                 ))}
@@ -3083,13 +3501,14 @@ const FocusGroupPage = () => {
               </div>
               <div style={{ color: '#16a34a', fontWeight: 700, fontSize: '1.13rem', margin: '18px 0 10px 0', textAlign: 'center' }}>Value Tensions</div>
               <div style={{ color: '#388e5c', textAlign: 'center', fontSize: '1.00rem', marginBottom: 18, fontWeight: 500, lineHeight: 1.5 }}>Sometimes, important goals or values can pull in different directions. Some common tensions include:</div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, width: '100%', marginBottom: 18 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12, width: '100%', marginBottom: 18 }}>
                 {tensionCards.map((card, idx) => (
                   <DraggableTensionCard
                     key={card.value + card.definition}
                     card={card}
                     isCustom={idx >= 2}
                     onDelete={() => setTensionCards(cards => cards.filter((c, i) => i !== idx))}
+                    onEdit={(newValue, newDefinition) => handleEditTensionCard(idx, newValue, newDefinition)}
                     onClick={() => handleClickTensionCard(card)}
                   />
                 ))}
@@ -3248,8 +3667,8 @@ const FocusGroupPage = () => {
               const newCaseErrors = {};
               caseCards.forEach((card, idx) => {
                 const errors = {};
-                if (!card.summary || card.summary.trim() === '') errors.summary = 'Short Summary is required.';
-                if (!card.caseText || card.caseText.trim() === '') errors.caseText = 'Case is required.';
+                if (!card.summary || card.summary.trim() === '') errors.summary = 'Case Theme is required.';
+                if (!card.caseText || card.caseText.trim() === '') errors.caseText = 'Case Narrative is required.';
                 if (!card.values || card.values.length === 0) errors.values = 'At least one Value is required.';
                 if (Object.keys(errors).length > 0) {
                   newCaseErrors[idx] = errors;
@@ -3471,11 +3890,9 @@ const FocusGroupPage = () => {
                   </div>
                 </div>
               </div>
-            )}
+            
 
             {/* Debug: Show modal state */}
-            {console.log('Rendering check - showExampleModal:', showExampleModal)}
-            {console.log('Component is rendering modal section')}
             
             {/* Example Modal */}
             {showExampleModal && (
@@ -3754,57 +4171,125 @@ const FocusGroupPage = () => {
           message={errorModal.message} 
           onClose={closeErrorModal} 
         />
-            
-            {/* PERMANENT DEBUG ELEMENT */}
+        
+        {/* Always visible debug text */}
+        <div style={{
+          position: 'fixed',
+          top: '10px',
+          right: '10px',
+          background: 'blue',
+          color: 'white',
+          padding: '10px',
+          zIndex: 99999999,
+          fontSize: '16px'
+        }}>
+          DEBUG: showConfirmModal = {showConfirmModal ? 'true' : 'false'}
+        </div>
+        
+        {/* Test Modal - Simple red box */}
+        {showConfirmModal && (
+          <div style={{
+            position: 'fixed',
+            top: '50px',
+            left: '50px',
+            background: 'red',
+            color: 'white',
+            padding: '20px',
+            zIndex: 99999999,
+            fontSize: '24px',
+            border: '3px solid black'
+          }}>
+            TEST MODAL - SHOULD BE VISIBLE!
+          </div>
+        )}
+        
+        {/* Confirmation Modal - Moved to main component area */}
+        {console.log('Checking showConfirmModal in render:', showConfirmModal)}
+        {showConfirmModal && (
+          console.log('showConfirmModal is true, rendering confirmation modal'),
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999999
+          }}>
             <div style={{
-              position: 'fixed',
-              top: '10px',
-              right: '10px',
-              background: 'blue',
-              color: 'white',
-              padding: '10px',
-              zIndex: 999999,
-              fontSize: '16px',
-              fontWeight: 'bold'
+              background: 'white',
+              borderRadius: 12,
+              padding: '2rem',
+              maxWidth: '500px',
+              width: '90%',
+              textAlign: 'center'
             }}>
-              DEBUG: showExampleModal = {showExampleModal.toString()}
-            </div>
-            
-            {/* SUPER SIMPLE TEST - Just a red div */}
-            {showExampleModal && (
-              <div style={{
-                position: 'fixed',
-                top: 0,
-                left: 0,
-                width: '100vw',
-                height: '100vh',
-                background: 'red',
-                zIndex: 999999,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'white',
-                fontSize: '48px',
-                fontWeight: 'bold'
+              <h3 style={{ color: '#16a34a', fontWeight: 700, fontSize: '1.3rem', margin: '0 0 1rem 0' }}>
+                Confirm Submission
+              </h3>
+              <p style={{ fontSize: '1rem', color: '#374151', marginBottom: '1.5rem', lineHeight: '1.5' }}>
+                Submit {caseCards.length} case{caseCards.length !== 1 ? 's' : ''} to the group "{groupName}"?
+              </p>
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'center', 
+                gap: '12px'
               }}>
-                🚨 RED SCREEN TEST 🚨
+                <button
+                  onClick={() => setShowConfirmModal(false)}
+                  style={{
+                    background: '#6b7280',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: 8,
+                    padding: '0.6rem 1.2rem',
+                    fontSize: '0.9rem',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmSave}
+                  style={{
+                    background: '#16a34a',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: 8,
+                    padding: '0.6rem 1.2rem',
+                    fontSize: '0.9rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    transition: 'background 0.2s'
+                  }}
+                  onMouseEnter={(e) => e.target.style.background = '#15803d'}
+                  onMouseLeave={(e) => e.target.style.background = '#16a34a'}
+                >
+                  Confirm Submit
+                </button>
               </div>
-            )}
-            
-            {/* ALWAYS SHOW STATE FOR DEBUG */}
-            <div style={{
-              position: 'fixed',
-              top: '100px',
-              right: '10px',
-              background: 'orange',
-              color: 'white',
-              padding: '10px',
-              zIndex: 999999,
-              fontSize: '14px',
-              fontWeight: 'bold'
-            }}>
-              showExampleModal: {showExampleModal.toString()}
             </div>
+          </div>
+        )}
+          <div style={{
+            position: 'fixed',
+            top: '10px',
+            left: '10px',
+            background: 'red',
+            color: 'white',
+            padding: '10px',
+            zIndex: 99999999,
+            fontSize: '20px'
+          }}>
+            DEBUG: Confirmation Modal Should Be Visible!
+          </div>
+
+            
+
       </DndProvider>
     );
   }

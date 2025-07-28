@@ -16,7 +16,7 @@ export const AuthProvider = ({ children }) => {
     });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      throw new Error(data.message || 'Login failed');
+      throw new Error(data.message || 'Incorrect password. Please try again.');
     }
     const data = await res.json();
     

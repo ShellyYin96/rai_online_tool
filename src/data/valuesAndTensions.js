@@ -1,77 +1,48 @@
 export const predefinedValues = [
   {
     value: "Fairness",
-    definition: "Ensuring AI systems treat all individuals and groups equitably, without bias or discrimination based on protected characteristics."
+    definition: "A fair AI system supports all learners equally. It avoids reinforcing bias and works well regardless of students' race, gender, ability, or background."
   },
   {
     value: "Transparency",
-    definition: "Making AI systems and their decision-making processes understandable and explainable to users and stakeholders."
+    definition: "A transparent AI system helps educators and students understand how decisions are made. Transparency means the system offers insight into why it flagged something or made a recommendation."
   },
   {
     value: "Privacy",
-    definition: "Protecting individuals' personal information and ensuring data is collected, used, and stored responsibly."
+    definition: "A privacy-respecting AI system protects students’ personal data. It limits what data is collected and makes sure users are informed and can give consent."
+  },
+  { value: "Performance",
+    definition: "A high-performing AI system provides timely, accurate, and useful results. It helps teachers and students without delays or frequent errors."
   },
   {
     value: "Safety",
-    definition: "Ensuring AI systems operate reliably and do not cause harm to users or the environment."
-  },
-  {
-    value: "Accountability",
-    definition: "Establishing clear responsibility for AI system outcomes and ensuring mechanisms for redress when issues arise."
+    definition: "A safe AI system minimizes harm physically, emotionally, and psychologically. It is designed to work reliably and protect student well-being."
   },
   {
     value: "Autonomy",
-    definition: "Preserving human agency and decision-making authority while using AI as a tool to enhance capabilities."
+    definition: "An autonomy-supporting AI system gives students and teachers control. It avoids making decisions for them and offers meaningful choices."
   },
   {
-    value: "Beneficence",
-    definition: "Designing AI systems that actively promote well-being and positive outcomes for individuals and society."
-  },
-  {
-    value: "Non-maleficence",
-    definition: "Ensuring AI systems do not cause harm, either intentionally or unintentionally."
-  },
-  {
-    value: "Justice",
-    definition: "Promoting equitable access to AI benefits and ensuring fair distribution of resources and opportunities."
-  },
-  {
-    value: "Trust",
-    definition: "Building confidence in AI systems through reliable performance, ethical design, and transparent communication."
+    value: "Accountability",
+    definition: "An accountable AI system has clear roles for who is responsible when something goes wrong. It allows educators and students to question or appeal its decisions."
   }
 ];
 
 export const predefinedTensions = [
   {
-    value: "Privacy vs. Transparency",
-    definition: "Balancing the need for transparency in AI decision-making with the protection of individual privacy."
+    value: "Fairness vs. Performance",
+    definition: "To ensure fairness, the AI system might be adjusted to work equally well for all student groups. However, this can sometimes reduce how precise or effective the system is overall."
   },
   {
-    value: "Accuracy vs. Fairness",
-    definition: "Balancing the pursuit of high accuracy with ensuring fair treatment across different demographic groups."
+    value: "Fairness vs. Privacy",
+    definition: "Making the AI system fairer may require collecting more detailed information about students to detect and reduce bias. But collecting that kind of data can raise privacy concerns."
   },
   {
-    value: "Autonomy vs. Safety",
-    definition: "Balancing user autonomy and control with ensuring system safety and preventing harmful outcomes."
+    value: "Privacy vs. Performance",
+    definition: "To protect student privacy, developers may limit how much personal data the system collects. While this safeguards confidentiality, it can also reduce the system’s ability to make accurate or helpful predictions."
   },
   {
-    value: "Efficiency vs. Explainability",
-    definition: "Balancing the computational efficiency of AI systems with the need for explainable and interpretable decisions."
-  },
-  {
-    value: "Innovation vs. Regulation",
-    definition: "Balancing rapid technological advancement with appropriate oversight and regulatory frameworks."
-  },
-  {
-    value: "Individual vs. Collective Good",
-    definition: "Balancing individual benefits and preferences with broader societal impacts and collective welfare."
-  },
-  {
-    value: "Accessibility vs. Complexity",
-    definition: "Balancing making AI systems accessible to diverse users while maintaining sophisticated functionality."
-  },
-  {
-    value: "Customization vs. Standardization",
-    definition: "Balancing personalized AI experiences with consistent, standardized approaches across different contexts."
+    value: "Safety vs. Transparency",
+    definition: "Protecting users from harm involves simplifying or hiding parts of how the AI system makes decisions. While this might prevent misuse or confusion, it can also make the system harder to understand or explain."
   }
 ]; 
