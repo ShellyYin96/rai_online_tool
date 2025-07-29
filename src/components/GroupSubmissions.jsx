@@ -140,6 +140,12 @@ const GroupSubmissions = () => {
     try {
       const comment = commentTexts[submissionId] || '';
       
+      if (!comment.trim()) {
+        showError('Please enter a comment before saving.');
+        setSavingComment(false);
+        return;
+      }
+      
       // Find the current submission
       const currentSubmission = groupSubs.find(sub => getSubmissionId(sub) === submissionId);
       if (!currentSubmission) {
@@ -157,11 +163,29 @@ const GroupSubmissions = () => {
       
       const result = await saveEditedSubmissionToServer(submissionId, editedData, comment);
       if (result.success) {
+        // Update the local state immediately to show the comment
+        setGroupSubs(prevSubs => prevSubs.map(sub => {
+          const subId = getSubmissionId(sub);
+          if (subId === submissionId) {
+            return {
+              ...sub,
+              facilitatorComment: comment,
+              facilitatorCommentTimestamp: new Date().toISOString(),
+              facilitatorCommentBy: `${user.username} (${user.email})`
+            };
+          }
+          return sub;
+        }));
+        
         // Clear the comment text
         setCommentTexts(prev => ({
           ...prev,
           [submissionId]: ''
         }));
+        
+        // Show success message
+        setSaveSuccess('Comment saved successfully!');
+        setTimeout(() => setSaveSuccess(''), 3000);
       } else {
         showError(`Failed to save comment: ${result.message}`);
       }
@@ -542,8 +566,8 @@ const GroupSubmissions = () => {
         setAddingTension(null);
         setExpandedIdx(null);
         
-        // Refresh the data to show the new edited submission
-        await fetchSubs();
+        // Don't refresh the data since we're updating local state immediately
+        // await fetchSubs();
         
         // Show success message
         setSaveSuccess(result.message);
@@ -1659,6 +1683,22 @@ const GroupSubmissions = () => {
                                 >
                                   {savingComment ? 'Saving...' : 'Save Comment'}
                                 </button>
+                                
+                                {/* Success message */}
+                                {saveSuccess && (
+                                  <div style={{
+                                    color: '#059669',
+                                    fontSize: '0.85rem',
+                                    fontWeight: 600,
+                                    marginTop: 8,
+                                    padding: '6px 12px',
+                                    background: '#d1fae5',
+                                    borderRadius: 6,
+                                    border: '1px solid #a7f3d0'
+                                  }}>
+                                    ✅ {saveSuccess}
+                                  </div>
+                                )}
                               </div>
                             )}
                           </div>

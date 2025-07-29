@@ -2942,8 +2942,8 @@ const FocusGroupPage = () => {
                 
                 {/* Vertical button layout */}
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
-                  {/* Show warning if user has unsaved work */}
-                  {hasUnsavedWork() && !submissionCompleted && (
+                  {/* Show warning if user has unsaved work (but not for facilitators) */}
+                  {hasUnsavedWork() && !submissionCompleted && user && user.role !== 'facilitator' && (
                     <div style={{ 
                       color: '#f59e0b', 
                       fontSize: '0.9rem', 
@@ -2958,6 +2958,23 @@ const FocusGroupPage = () => {
                       💡 Great work! Don't forget to save your submission before reviewing others
                     </div>
                   )}
+                  
+                  {/* Show facilitator indicator */}
+                  {user && user.role === 'facilitator' && (
+                    <div style={{ 
+                      color: '#059669', 
+                      fontSize: '0.9rem', 
+                      fontWeight: 600, 
+                      marginBottom: 8,
+                      textAlign: 'center',
+                      padding: '8px 12px',
+                      background: '#d1fae5',
+                      borderRadius: 8,
+                      border: '1px solid #a7f3d0'
+                    }}>
+                      👨‍🏫 Facilitator Mode: You can review submissions anytime
+                    </div>
+                  )}
                 <button
                   className="green-btn polished-btn"
                     style={{ 
@@ -2965,7 +2982,7 @@ const FocusGroupPage = () => {
                       padding: '0.8rem 2.5rem', 
                       borderRadius: 12, 
                       fontWeight: 800, 
-                      background: hasUnsavedWork() && !submissionCompleted ? '#f59e0b' : '#16a34a', 
+                      background: hasUnsavedWork() && !submissionCompleted && user && user.role !== 'facilitator' ? '#f59e0b' : '#16a34a', 
                       color: '#fff', 
                       border: 'none', 
                       boxShadow: '0 2px 8px rgba(34,197,94,0.07)', 
@@ -3062,14 +3079,17 @@ const FocusGroupPage = () => {
                   className="green-btn polished-btn"
                     style={{ fontSize: '1rem', padding: '0.8rem 2.5rem', borderRadius: 12, fontWeight: 700, background: '#fff', color: '#16a34a', border: '2px solid #bbf7d0', boxShadow: '0 2px 8px rgba(34,197,94,0.07)', cursor: 'pointer' }}
                   onClick={() => {
-                    if (hasUnsavedWork() && !submissionCompleted) {
-                      // Show warning modal
+                    // Check if user is a facilitator
+                    const isFacilitator = user && user.role === 'facilitator';
+                    
+                    if (hasUnsavedWork() && !submissionCompleted && !isFacilitator) {
+                      // Show warning modal for regular users
                       setErrorModal({
                         isOpen: true,
                         message: 'Great work on your case studies! 🎉 Before you review other submissions, please click "Save All" to submit your work. This way, your contributions will be saved and you can see how your ideas compare with others in the group.'
                       });
                     } else {
-                      // Navigate to group submissions
+                      // Navigate to group submissions (facilitators can always access)
                       navigate(`/group-submissions/${encodeURIComponent(groupName)}`);
                     }
                   }}
