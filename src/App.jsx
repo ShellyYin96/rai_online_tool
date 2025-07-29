@@ -13,6 +13,7 @@ import { Routes, Route, useParams } from 'react-router-dom';
 import FocusGroupPage from './components/FocusGroupPage';
 import MySubmissions from './components/MySubmissions';
 import GroupSubmissions from './components/GroupSubmissions';
+import ConnectionTest from './components/ConnectionTest';
 
 function GroupCaseContributionPage() {
   const { groupName } = useParams();
@@ -118,6 +119,8 @@ function App() {
               onSectionChange={handleTopBarChange} 
             />
             <div className="main-content">
+              {/* Temporary: Add ConnectionTest for debugging */}
+              <ConnectionTest />
               <FocusGroupPage />
             </div>
             <Footer />

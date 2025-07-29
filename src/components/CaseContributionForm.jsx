@@ -64,7 +64,7 @@ const SCENARIOS = [
     label: 'Classroom Management', 
     template: {
       title: "AI for Classroom Management: Using AI to assist with classroom management, such as monitoring student engagement, automating attendance, or flagging disruptions.",
-      description: "This AI-powered tool helps teachers manage classrooms more efficiently, including real-time engagement tracking, automated attendance, and early warning for disruptions. The goal is to support teachers while ensuring student privacy and fairness.",
+      description: "This application helps teachers manage classrooms more efficiently, including real-time engagement tracking, automated attendance, and early warning for disruptions.",
       payer: "School District or Educational Institution funding the AI system for classroom management and teacher support.",
       endUser: "Teachers and classroom staff who interact with the AI system daily to monitor and manage students.",
       servicingParty: "EdTech company or IT department responsible for deploying, maintaining, and updating the AI system.",
@@ -82,11 +82,11 @@ const SCENARIOS = [
     label: 'Assessment', 
     template: {
       title: "AI for Student Assessment: Leveraging AI for student assessment, including automated grading, personalized feedback, or detecting academic dishonesty.",
-      description: "This AI system evaluates student work, provides detailed feedback, and identifies potential academic integrity issues. The system aims to reduce teacher workload while maintaining assessment quality and fairness across diverse student populations.",
+      description: "This application evaluates student work, provides detailed feedback, and identifies potential academic integrity issues.",
       payer: "Educational institutions and school districts seeking to streamline assessment processes and reduce grading workload for educators.",
       endUser: "Teachers and educational administrators who use the AI system to grade assignments, review feedback, and monitor academic integrity.",
       servicingParty: "Assessment technology company or educational software provider responsible for AI model training, system maintenance, and continuous improvement.",
-      impactedIndividuals: "Students whose work is evaluated by AI systems, including those from diverse backgrounds who may be disproportionately affected by algorithmic bias.",
+      impactedIndividuals: "Students whose work is evaluated by AI systems, including those from diverse backgrounds.",
       doAct: "Automatically grade assignments, generate personalized feedback, and flag potential instances of academic dishonesty for human review.",
       inferReason: "Analyze writing patterns, answer similarity, and performance trends to infer learning gaps and potential cheating behaviors.",
       data1: "Student submissions including essays, problem sets, and exam responses with metadata.",
@@ -100,7 +100,7 @@ const SCENARIOS = [
     label: 'Learning', 
     template: {
       title: "AI for Personalized Learning: AI-powered personalized learning, adaptive content delivery, or intelligent tutoring systems to support student learning.",
-      description: "This tool adapts educational content and pacing to individual student needs, providing personalized learning pathways and intelligent tutoring support. The goal is to optimize learning outcomes while ensuring equitable access and preventing algorithmic bias.",
+      description: "This application adapts educational content and pacing to individual student needs, providing personalized learning pathways and intelligent tutoring support.",
       payer: "Educational institutions, school districts, and online learning platforms investing in personalized education technology.",
       endUser: "Students who interact with the AI system for learning, and teachers who monitor and guide the personalized learning process.",
       servicingParty: "Educational technology company or AI learning platform provider responsible for content creation, algorithm development, and system optimization.",
@@ -110,7 +110,7 @@ const SCENARIOS = [
       data1: "Student interaction data including time spent on topics, correct/incorrect responses, and learning pathway choices.",
       data2: "Educational content metadata, difficulty ratings, and prerequisite relationships between concepts.",
       data3: "Student learning profiles, cognitive assessments, and historical performance across different subjects.",
-      data4: "Demographic information, learning preferences, and accessibility requirements for equitable algorithm design."
+      data4: "Demographic information, learning preferences, and accessibility requirements."
     }
   },
   { key: 'custom', label: 'Create Your Own', template: null },

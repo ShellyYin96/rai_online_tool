@@ -57,7 +57,7 @@ const conceptCardTemplates = {
     data1: "Student interaction data including time spent on topics, correct/incorrect responses, and learning pathway choices.",
     data2: "Educational content metadata, difficulty ratings, and prerequisite relationships between concepts.",
     data3: "Student learning profiles, cognitive assessments, and historical performance across different subjects.",
-    data4: "Demographic information, learning preferences, and accessibility requirements for equitable algorithm design."
+    data4: "Demographic information, learning preferences, and accessibility requirements."
   }
 };
 
