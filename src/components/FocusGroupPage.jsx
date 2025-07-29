@@ -542,6 +542,16 @@ const FocusGroupPage = () => {
     return result;
   };
 
+  // Helper function to check if user has unsaved work
+  const hasUnsavedWork = () => {
+    return caseCards.some(card => 
+      card.summary && card.summary.trim() !== '' ||
+      card.caseText && card.caseText.trim() !== '' ||
+      card.values && card.values.length > 0 ||
+      card.tensions && card.tensions.length > 0
+    );
+  };
+
   // Click handler for value cards
   const handleClickValueCard = (card) => {
     console.log('Value card clicked:', card.value);
@@ -2932,9 +2942,36 @@ const FocusGroupPage = () => {
                 
                 {/* Vertical button layout */}
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+                  {/* Show warning if user has unsaved work */}
+                  {hasUnsavedWork() && !submissionCompleted && (
+                    <div style={{ 
+                      color: '#f59e0b', 
+                      fontSize: '0.9rem', 
+                      fontWeight: 600, 
+                      marginBottom: 8,
+                      textAlign: 'center',
+                      padding: '8px 12px',
+                      background: '#fef3c7',
+                      borderRadius: 8,
+                      border: '1px solid #fde68a'
+                    }}>
+                      💡 Great work! Don't forget to save your submission before reviewing others
+                    </div>
+                  )}
                 <button
                   className="green-btn polished-btn"
-                    style={{ fontSize: '1rem', padding: '0.8rem 2.5rem', borderRadius: 12, fontWeight: 800, background: '#16a34a', color: '#fff', border: 'none', boxShadow: '0 2px 8px rgba(34,197,94,0.07)', cursor: 'pointer' }}
+                    style={{ 
+                      fontSize: '1rem', 
+                      padding: '0.8rem 2.5rem', 
+                      borderRadius: 12, 
+                      fontWeight: 800, 
+                      background: hasUnsavedWork() && !submissionCompleted ? '#f59e0b' : '#16a34a', 
+                      color: '#fff', 
+                      border: 'none', 
+                      boxShadow: '0 2px 8px rgba(34,197,94,0.07)', 
+                      cursor: 'pointer',
+                      transition: 'background-color 0.2s ease'
+                    }}
                   onClick={async () => {
                     console.log('Save All button clicked!');
                     console.log('submissionCompleted:', submissionCompleted);
@@ -3024,7 +3061,18 @@ const FocusGroupPage = () => {
                 <button
                   className="green-btn polished-btn"
                     style={{ fontSize: '1rem', padding: '0.8rem 2.5rem', borderRadius: 12, fontWeight: 700, background: '#fff', color: '#16a34a', border: '2px solid #bbf7d0', boxShadow: '0 2px 8px rgba(34,197,94,0.07)', cursor: 'pointer' }}
-                  onClick={() => navigate(`/group-submissions/${encodeURIComponent(groupName)}`)}
+                  onClick={() => {
+                    if (hasUnsavedWork() && !submissionCompleted) {
+                      // Show warning modal
+                      setErrorModal({
+                        isOpen: true,
+                        message: 'Great work on your case studies! 🎉 Before you review other submissions, please click "Save All" to submit your work. This way, your contributions will be saved and you can see how your ideas compare with others in the group.'
+                      });
+                    } else {
+                      // Navigate to group submissions
+                      navigate(`/group-submissions/${encodeURIComponent(groupName)}`);
+                    }
+                  }}
                 >
                   Review Group Submission
                 </button>
