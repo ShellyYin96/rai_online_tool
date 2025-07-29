@@ -73,13 +73,15 @@ const GroupSubmissions = () => {
         console.log('API Response:', data);
         console.log('Group submissions data:', data.data);
         setGroupSubs(data.data || []);
-        // Check if user is a member (has submitted to this group)
+        // Check if user is a member (has submitted to this group) OR is a facilitator
         if (user) {
-          setIsMember((data.data || []).some(
+          const isFacilitator = user.role === 'facilitator';
+          const hasSubmitted = (data.data || []).some(
             sub =>
               sub.username === user.username ||
               sub.email === user.email
-          ));
+          );
+          setIsMember(isFacilitator || hasSubmitted);
         }
       } catch (err) {
         console.error('Error fetching submissions:', err);
@@ -611,7 +613,12 @@ const GroupSubmissions = () => {
           textAlign: 'center'
         }}>
           <h2 style={{ color: '#f59e42', marginBottom: 16, fontSize: '2rem', fontWeight: 700 }}>Access Denied</h2>
-          <div style={{ color: '#888', fontSize: '1.1rem', marginBottom: 24 }}>You must have submitted a case to this group to view group submissions.</div>
+          <div style={{ color: '#888', fontSize: '1.1rem', marginBottom: 24 }}>
+            {user && user.role === 'facilitator' 
+              ? 'Facilitators should be able to access group submissions. Please try refreshing the page or contact support if the issue persists.'
+              : 'You must have submitted a case to this group to view group submissions.'
+            }
+          </div>
           <button className="green-btn polished-btn" onClick={() => navigate(-1)}>Go Back</button>
         </div>
       </div>
