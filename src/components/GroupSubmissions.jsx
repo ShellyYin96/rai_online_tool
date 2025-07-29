@@ -155,12 +155,19 @@ const GroupSubmissions = () => {
         return;
       }
       
-      // Create a minimal edit that only updates the facilitator comment
+      // Create a minimal edit that adds the new facilitator comment to the array
+      const newComment = {
+        text: comment,
+        timestamp: new Date().toISOString(),
+        author: `${user.username} (${user.email})`
+      };
+      
+      // Initialize facilitatorComments array if it doesn't exist
+      const existingComments = currentSubmission.facilitatorComments || [];
+      
       const editedData = {
         ...currentSubmission,
-        facilitatorComment: comment,
-        facilitatorCommentTimestamp: new Date().toISOString(),
-        facilitatorCommentBy: `${user.username} (${user.email})`
+        facilitatorComments: [...existingComments, newComment]
       };
       
       const result = await saveEditedSubmissionToServer(submissionId, editedData, comment);
@@ -169,11 +176,15 @@ const GroupSubmissions = () => {
         setGroupSubs(prevSubs => prevSubs.map(sub => {
           const subId = getSubmissionId(sub);
           if (subId === submissionId) {
+            const existingComments = sub.facilitatorComments || [];
+            const newComment = {
+              text: comment,
+              timestamp: new Date().toISOString(),
+              author: `${user.username} (${user.email})`
+            };
             return {
               ...sub,
-              facilitatorComment: comment,
-              facilitatorCommentTimestamp: new Date().toISOString(),
-              facilitatorCommentBy: `${user.username} (${user.email})`
+              facilitatorComments: [...existingComments, newComment]
             };
           }
           return sub;
@@ -186,7 +197,7 @@ const GroupSubmissions = () => {
         }));
         
         // Show success message
-        setSaveSuccess('Comment saved successfully!');
+        setSaveSuccess('Comment added successfully!');
         setTimeout(() => setSaveSuccess(''), 3000);
       } else {
         showError(`Failed to save comment: ${result.message}`);
@@ -1624,28 +1635,55 @@ const GroupSubmissions = () => {
                               <div style={{ marginTop: 16, borderTop: '2px solid #e5e7eb', paddingTop: 12 }}>
                                 <div style={{ fontWeight: 700, color: '#7c3aed', fontSize: '0.95rem', marginBottom: 8 }}>
                                   Facilitator Comments
-                                </div>
-                                
-                                {/* Display existing comment */}
-                                {sub.facilitatorComment && (
-                                  <div style={{ 
-                                    background: '#f3f4f6', 
-                                    borderRadius: 8, 
-                                    padding: '12px 16px', 
-                                    marginBottom: 12,
-                                    border: '1px solid #d1d5db'
-                                  }}>
-                                    <div style={{ color: '#374151', fontSize: '0.9rem', lineHeight: 1.4 }}>
-                                      {sub.facilitatorComment}
-                                    </div>
-                                    <div style={{ 
+                                  {sub.facilitatorComments && sub.facilitatorComments.length > 0 && (
+                                    <span style={{ 
                                       color: '#6b7280', 
                                       fontSize: '0.8rem', 
-                                      marginTop: 6,
-                                      fontStyle: 'italic'
+                                      fontWeight: 500,
+                                      marginLeft: 8
                                     }}>
-                                      By {sub.facilitatorCommentBy} • {new Date(sub.facilitatorCommentTimestamp).toLocaleString()}
-                                    </div>
+                                      ({sub.facilitatorComments.length} comment{sub.facilitatorComments.length !== 1 ? 's' : ''})
+                                    </span>
+                                  )}
+                                </div>
+                                
+                                {/* Display all existing comments */}
+                                {sub.facilitatorComments && sub.facilitatorComments.length > 0 && (
+                                  <div style={{ marginBottom: 12 }}>
+                                    {sub.facilitatorComments.map((comment, index) => (
+                                      <div key={index} style={{ 
+                                        background: '#f3f4f6', 
+                                        borderRadius: 8, 
+                                        padding: '12px 16px', 
+                                        marginBottom: index < sub.facilitatorComments.length - 1 ? 8 : 0,
+                                        border: '1px solid #d1d5db',
+                                        position: 'relative'
+                                      }}>
+                                        {index > 0 && (
+                                          <div style={{
+                                            position: 'absolute',
+                                            top: -4,
+                                            left: '50%',
+                                            transform: 'translateX(-50%)',
+                                            width: 2,
+                                            height: 8,
+                                            background: '#d1d5db',
+                                            borderRadius: 1
+                                          }} />
+                                        )}
+                                        <div style={{ color: '#374151', fontSize: '0.9rem', lineHeight: 1.4 }}>
+                                          {comment.text}
+                                        </div>
+                                        <div style={{ 
+                                          color: '#6b7280', 
+                                          fontSize: '0.8rem', 
+                                          marginTop: 6,
+                                          fontStyle: 'italic'
+                                        }}>
+                                          By {comment.author} • {new Date(comment.timestamp).toLocaleString()}
+                                        </div>
+                                      </div>
+                                    ))}
                                   </div>
                                 )}
                                 
